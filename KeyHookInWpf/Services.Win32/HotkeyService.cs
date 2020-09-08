@@ -11,7 +11,9 @@ https://www.pinvoke.net/default.aspx/Delegates/HookProc.html
 http://pinvoke.net/default.aspx/Enums/HookType.html
 https://www.pinvoke.net/default.aspx/user32.setwindowshookex
 https://www.pinvoke.net/default.aspx/user32.unhookwindowshookex
- 
+https://www.pinvoke.net/default.aspx/user32.callnexthookex
+
+https://www.pinvoke.net/default.aspx/kernel32/GetModuleHandle.html
  */
 
 
@@ -23,9 +25,15 @@ using System.Runtime.InteropServices;
 
 namespace Services.Win32
 {
-    public class HotkeyService : IHotkeyService
+    public class HotkeyService : IHotkeyService, IDisposable
     {
+        private IntPtr currentHook;
+
+        private Guid guid = Guid.NewGuid();
         private readonly NLog.Logger logger = null;
+
+        private List<Action> hotkeyActions = null;
+        private HookProc myCallbackDelegate = null;
 
         public HotkeyService()
         {
@@ -33,21 +41,34 @@ namespace Services.Win32
 
             this.hotkeyActions = new List<Action>()
             {
-                () => logger.Info("this is a key down action")
+                () => logger.Info(string.Format("[{0}] logging a key action", guid.ToString()))
             };
 
-            //logger.Info("this is a test");
-    }
+            this.myCallbackDelegate = new HookProc(this.MyCallbackFunction);
 
-        ~HotkeyService()
-        {
+            logger.Info(string.Format("[{0}] Hotkey service started", guid.ToString()));
 
+            using (Process process = Process.GetCurrentProcess())
+            using (ProcessModule module = process.MainModule)
+            {
+                IntPtr hModule = GetModuleHandle(module.ModuleName);
+                currentHook = SetWindowsHookEx(HookType.WH_KEYBOARD_LL, this.myCallbackDelegate, hModule, 0);
+            }
         }
 
-        private List<Action> hotkeyActions = null;
+        public void Dispose()
+        {
+            UnhookWindowsHookEx(currentHook);
+
+            logger.Info(string.Format("[{0}] Hotkey service shut down", guid.ToString()));
+        }
 
         // https://www.pinvoke.net/default.aspx/Delegates/HookProc.html
         private delegate IntPtr HookProc(int code, IntPtr wParam, IntPtr lParam);
+
+        // see https://www.pinvoke.net/default.aspx/kernel32/GetModuleHandle.html
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr GetModuleHandle(string lpModuleName);
 
         // see https://www.pinvoke.net/default.aspx/user32.setwindowshookex
         [DllImport("user32.dll", SetLastError = true)]
@@ -57,8 +78,9 @@ namespace Services.Win32
         [DllImport("user32.dll", SetLastError = true)]
         static extern bool UnhookWindowsHookEx(IntPtr hhk);
 
+        // see https://www.pinvoke.net/default.aspx/user32.callnexthookex
         [DllImport("user32.dll")]
-        static extern int CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+        static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
         public void AddKeyDownAction(Action keyDownAction)
         {
@@ -85,7 +107,7 @@ namespace Services.Win32
             throw new NotImplementedException();
         }
 
-        private int MyCallbackFunction(int code, IntPtr wParam, IntPtr lParam)
+        private IntPtr MyCallbackFunction(int code, IntPtr wParam, IntPtr lParam)
         {
             if (code < 0)
             {
@@ -93,6 +115,12 @@ namespace Services.Win32
                 //and return the value returned by CallNextHookEx
                 return CallNextHookEx(IntPtr.Zero, code, wParam, lParam);
             }
+
+            if (hotkeyActions.Count > 0)
+            {
+                hotkeyActions[0].Invoke();
+            }
+
             // we can convert the 2nd parameter (the key code) to a System.Windows.Forms.Keys enum constant
             //Keys keyPressed = (Keys)wParam.ToInt32();
             //Console.WriteLine(keyPressed);

@@ -1,6 +1,7 @@
 ﻿using Services.Win32;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,14 +22,26 @@ namespace KeyHookInWpf
     /// </summary>
     public partial class MainWindow : Window
     {
+        private HotkeyService mahook;
+        private HotkeyService mahook2;
+
         public MainWindow()
         {
             InitializeComponent();
 
-            var maHook = new HotkeyService();
+            mahook = new HotkeyService();
+            mahook2 = new HotkeyService();
+
+            this.Closing += MainWindow_Closing;
 
             //var logger = NLog.LogManager.GetCurrentClassLogger();
             //logger.Info("this is a test from main");
+        }
+
+        void MainWindow_Closing(object sender, CancelEventArgs e)
+        {
+            mahook.Dispose();
+            mahook2.Dispose();
         }
     }
 }
