@@ -3,3 +3,5 @@
 ################################################################################
 
 /KeyHookInWpf/.vs/KeyHookInWpf
+/KeyHookInWpf/KeyHookInWpf/obj
+/KeyHookInWpf/Services.Contracts/obj
