@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Services.Win32;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,6 +24,11 @@ namespace KeyHookInWpf
         public MainWindow()
         {
             InitializeComponent();
+
+            var maHook = new HotkeyService();
+
+            //var logger = NLog.LogManager.GetCurrentClassLogger();
+            //logger.Info("this is a test from main");
         }
     }
 }

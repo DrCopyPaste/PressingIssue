@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30128.74
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyHookInWpf", "KeyHookInWpf\KeyHookInWpf.csproj", "{09F46E89-BC38-4D04-8A9D-9120BE49345F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KeyHookInWpf", "KeyHookInWpf\KeyHookInWpf.csproj", "{09F46E89-BC38-4D04-8A9D-9120BE49345F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Services.Contracts", "Services.Contracts\Services.Contracts.csproj", "{8270C330-5BC3-4956-8D14-21D07DC143EF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Services.Contracts", "Services.Contracts\Services.Contracts.csproj", "{8270C330-5BC3-4956-8D14-21D07DC143EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Services.Win32", "Services.Win32\Services.Win32.csproj", "{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{8270C330-5BC3-4956-8D14-21D07DC143EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8270C330-5BC3-4956-8D14-21D07DC143EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8270C330-5BC3-4956-8D14-21D07DC143EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

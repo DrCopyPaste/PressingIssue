@@ -5,3 +5,7 @@
 /KeyHookInWpf/.vs/KeyHookInWpf
 /KeyHookInWpf/KeyHookInWpf/obj
 /KeyHookInWpf/Services.Contracts/obj
+/KeyHookInWpf/Services.Win32/obj
+/KeyHookInWpf/KeyHookInWpf/bin/Debug/netcoreapp3.1
+/KeyHookInWpf/Services.Contracts/bin/Debug/netcoreapp3.1
+/KeyHookInWpf/Services.Win32/bin/Debug/netcoreapp3.1
