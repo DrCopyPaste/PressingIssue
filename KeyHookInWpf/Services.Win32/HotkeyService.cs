@@ -5,6 +5,7 @@ in a later stage one could also allow hotkeys to trigger "on key down" AND "on r
 
  resources:
 http://www.dylansweb.com/2014/10/low-level-global-keyboard-hook-sink-in-c-net/
+https://stackoverflow.com/questions/604410/global-keyboard-capture-in-c-sharp-application/34384189#34384189
 
 
 
@@ -28,13 +29,18 @@ http://pinvoke.net/default.aspx/Constants.WM
 using Services.Contracts;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace Services.Win32
 {
     public class HotkeyService : IHotkeyService, IDisposable
     {
+        public event EventHandler<HotkeyServiceHookEventArgs> KeyEvent;
+
+
         // https://www.pinvoke.net/default.aspx/user32.getkeystate
         private const int KEY_PRESSED = 0x8000;
 
@@ -267,25 +273,43 @@ namespace Services.Win32
 
             this.hotkeyActions = new List<Action>()
             {
-                () => logger.Info(string.Format("[{0}] logging a key action", guid.ToString()))
+                () => logger.Info($"[{guid.ToString()}] logging a key action")
             };
 
             this.myCallbackDelegate = new HookProc(this.MyCallbackFunction);
 
-            logger.Info(string.Format("[{0}] Hotkey service started", guid.ToString()));
+            logger.Info($"[{guid.ToString()}] Hotkey service started");
 
             using (Process process = Process.GetCurrentProcess())
             using (ProcessModule module = process.MainModule)
             {
                 IntPtr hModule = GetModuleHandle(module.ModuleName);
                 currentHook = SetWindowsHookEx(HookType.WH_KEYBOARD_LL, this.myCallbackDelegate, hModule, 0);
+
+                if (currentHook == IntPtr.Zero)
+                {
+                    int errorCode = Marshal.GetLastWin32Error();
+                    logger.Error($"[{guid.ToString()}] could not start keyboard hook");
+                    throw new Win32Exception(errorCode, $"Could not start keyboard hook for '{Process.GetCurrentProcess().ProcessName}'. Error {errorCode}: {new Win32Exception(Marshal.GetLastWin32Error()).Message}.");
+                }
             }
         }
 
         public void Dispose()
         {
-            UnhookWindowsHookEx(currentHook);
+            if (currentHook != IntPtr.Zero)
+            {
+                if (!UnhookWindowsHookEx(currentHook))
+                {
+                    int errorCode = Marshal.GetLastWin32Error();
+                    logger.Error($"[{guid.ToString()}] error on trying to dispose keyboard hook. ({errorCode})");
+                    throw new Win32Exception(errorCode, $"Error on trying to remove keyboard hook for '{Process.GetCurrentProcess().ProcessName}'. Error {errorCode}: {new Win32Exception(Marshal.GetLastWin32Error()).Message}.");
+                }
 
+                currentHook = IntPtr.Zero;
+            }
+
+            UnhookWindowsHookEx(currentHook);
             logger.Info(string.Format("[{0}] Hotkey service shut down", guid.ToString()));
         }
 
@@ -339,43 +363,53 @@ namespace Services.Win32
 
         private IntPtr MyCallbackFunction(int code, IntPtr wParam, IntPtr lParam)
         {
-            if (code < 0)
+            if (code >= 0)
             {
-                //you need to call CallNextHookEx without further processing
-                //and return the value returned by CallNextHookEx
-                return CallNextHookEx(IntPtr.Zero, code, wParam, lParam);
+                // WM_KEYDOWN / WM_KEYUP capture most key events
+                // WM_SYSKEYDOWN / WM_SYSKEYUP is needed to capture events where ALT is helt down plus other keys
+
+                if (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN || wParam == (IntPtr)WM_KEYUP || wParam == (IntPtr)WM_SYSKEYUP)
+                {
+                    try
+                    {
+                        KeyEvent?.Invoke(this, new HotkeyServiceHookEventArgs(wParam, lParam));
+                    }
+                    catch(Exception ex)
+                    {
+                        // "silently" ignore any errors when triggering key hook events
+                        logger.Error(ex, "An error occurred trying to trigger the key hook event.");
+                    }
+                }
             }
 
-            // WM_KEYDOWN / WM_KEYUP capture most key events
-            // WM_SYSKEYDOWN / WM_SYSKEYUP is needed to capture events where ALT is helt down plus other keys
-
-            if (wParam == (IntPtr)WM_KEYDOWN)
-            {
-                logger.Info(string.Format("[{0}] logging WM_KEYDOWN, wparam: {1} lparam: {2} Keyboard.Modifiers {3}", guid.ToString(), wParam, lParam, System.Windows.Input.Keyboard.Modifiers.ToString()));
-            }
-            else if (wParam == (IntPtr)WM_SYSKEYDOWN)
-            {
-                logger.Info(string.Format("[{0}] logging WM_SYSKEYDOWN, wparam: {1} lparam: {2} Keyboard.Modifiers {3}", guid.ToString(), wParam, lParam, System.Windows.Input.Keyboard.Modifiers.ToString()));
-            }
-            else if (wParam == (IntPtr)WM_KEYUP)
-            {
-                logger.Info(string.Format("[{0}] logging WM_KEYUP, wparam: {1} lparam: {2} Keyboard.Modifiers {3}", guid.ToString(), wParam, lParam, System.Windows.Input.Keyboard.Modifiers.ToString()));
-            }
-            else if (wParam == (IntPtr)WM_SYSKEYUP)
-            {
-                logger.Info(string.Format("[{0}] logging WM_SYSKEYUP, wparam: {1} lparam: {2} Keyboard.Modifiers {3}", guid.ToString(), wParam, lParam, System.Windows.Input.Keyboard.Modifiers.ToString()));
-            }
-
-            if (hotkeyActions.Count > 0)
-            {
-                // hotkeyActions[0].Invoke();
-            }
-
-            // we can convert the 2nd parameter (the key code) to a System.Windows.Forms.Keys enum constant
-            //Keys keyPressed = (Keys)wParam.ToInt32();
-            //Console.WriteLine(keyPressed);
-            //return the value returned by CallNextHookEx
+            //you need to call CallNextHookEx without further processing
+            //and return the value returned by CallNextHookEx
             return CallNextHookEx(IntPtr.Zero, code, wParam, lParam);
+        }
+
+        public class HotkeyServiceHookEventArgs
+        {
+            public bool keyDown { get; private set; }
+            public bool keyUp { get; private set; }
+            public int lParam { get; private set; }
+            public string keyName { get; private set; }
+
+            /// <summary>
+            /// wParam may be WM_KEYDOWN / WM_KEYUP or WM_SYSKEYUP / WM_SYSKEYDOWN
+            /// </summary>
+            /// <param name="wParam"></param>
+            public HotkeyServiceHookEventArgs(IntPtr wParam, IntPtr lParam)
+            {
+                this.keyDown = wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN;
+                this.keyUp = wParam == (IntPtr)WM_KEYUP || wParam == (IntPtr)WM_SYSKEYUP;
+
+                this.lParam = Marshal.ReadInt32(lParam);
+
+                // seems OP to include System.Windows.Forms just for this
+                // but this enum is EXACTLY what we need to map lParam to something sensible
+                // one COULD of course also just copy the enum from https://github.com/dotnet/winforms/blob/master/src/System.Windows.Forms/src/System/Windows/Forms/Keys.cs
+                keyName = ((Keys)this.lParam).ToString();
+            }
         }
     }
 
