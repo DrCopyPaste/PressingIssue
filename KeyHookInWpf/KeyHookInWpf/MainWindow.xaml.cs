@@ -39,7 +39,7 @@ namespace KeyHookInWpf
             mahook = new HotkeyService();
             //mahook2 = new HotkeyService();
 
-            mahook.KeyEvent += Mahook_KeyEvent;
+            
 
             this.Closing += MainWindow_Closing;
 
@@ -51,17 +51,7 @@ namespace KeyHookInWpf
              */
         }
 
-        private void Mahook_KeyEvent(object sender, HotkeyService.HotkeyServiceHookEventArgs e)
-        {
-            if (e.keyDown)
-            {
-                logger.Info($"logging key down - lparam: {e.lParam} - key: {e.keyName}");
-            }
-            else if (e.keyUp)
-            {
-                logger.Info($"logging key up - lparam: {e.lParam} - key: {e.keyName}");
-            }
-        }
+        
 
         void MainWindow_Closing(object sender, CancelEventArgs e)
         {
