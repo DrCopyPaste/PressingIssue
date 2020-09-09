@@ -10,6 +10,8 @@ namespace Services.Win32
 
         private List<Action> hotkeyActions = null;
         private KeyboardHook keyboardHook = null;
+        private HashSet<string> pressedKeys = null;
+        private HashSet<string> nonModifierKeys = null;
 
         public HotkeyService()
         {
@@ -23,6 +25,9 @@ namespace Services.Win32
 
             keyboardHook.KeyEvent += Mahook_KeyEvent;
             keyboardHook.Start();
+
+            pressedKeys = new HashSet<string>();
+            nonModifierKeys = new HashSet<string>();
         }
 
         public void Dispose()
@@ -34,11 +39,31 @@ namespace Services.Win32
         {
             if (e.keyDown)
             {
-                logger.Info($"logging key down - lparam: {e.lParam} - key: {e.keyName}");
+                if (!pressedKeys.Contains(e.keyName))
+                {
+                    pressedKeys.Add(e.keyName);
+                }
+
+                if (!nonModifierKeys.Contains(e.keyName) && !keyboardHook.ModifierKeys.Contains(e.keyName))
+                {
+                    nonModifierKeys.Add(e.keyName);
+                }
+
+                logger.Info($"logging key down - lparam: {e.lParam} - key: {e.keyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', nonModifierKeys)}");
             }
             else if (e.keyUp)
             {
-                logger.Info($"logging key up - lparam: {e.lParam} - key: {e.keyName}");
+                if (pressedKeys.Contains(e.keyName))
+                {
+                    pressedKeys.Remove(e.keyName);
+                }
+
+                if (nonModifierKeys.Contains(e.keyName))
+                {
+                    nonModifierKeys.Remove(e.keyName);
+                }
+
+                logger.Info($"logging key up - lparam: {e.lParam} - key: {e.keyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', nonModifierKeys)}");
             }
         }
 
