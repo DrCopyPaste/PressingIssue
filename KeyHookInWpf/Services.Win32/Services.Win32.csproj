@@ -3,6 +3,10 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="NLog.Extensions.Logging" Version="1.6.5" />

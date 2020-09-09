@@ -30,7 +30,7 @@ namespace KeyHookInWpf
             InitializeComponent();
 
             mahook = new HotkeyService();
-            mahook2 = new HotkeyService();
+            //mahook2 = new HotkeyService();
 
             this.Closing += MainWindow_Closing;
 
@@ -41,7 +41,7 @@ namespace KeyHookInWpf
         void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             mahook.Dispose();
-            mahook2.Dispose();
+            //mahook2.Dispose();
         }
     }
 }
