@@ -7,9 +7,9 @@ namespace Services.Contracts
         void StartHook();
         void StopHook();
 
-        void AddOrUpdateQuickCastHotkey(string settingString, HotkeyAction hotkeyAction);
+        void AddOrUpdateQuickCastHotkey(string settingString, Action hotkeyAction);
         
-        void AddOrUpdateOnReleaseHotkey(string settingString, HotkeyAction hotkeyAction);
+        void AddOrUpdateOnReleaseHotkey(string settingString, Action hotkeyAction);
 
         string GetCurrentKeysPressed();
     }

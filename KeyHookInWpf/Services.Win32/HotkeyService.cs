@@ -10,22 +10,29 @@ namespace Services.Win32
     {
         private readonly NLog.Logger logger = null;
 
-        private Dictionary<string, HotkeyAction> quickCastHotkeys = null;
-        private Dictionary<string, HotkeyAction> onReleaseHotkeys = null;
+        // key = hotkeysettingstring, value = currently held down
+        private Dictionary<string, bool> hotkeyPressedStates = null;
+
+        private Dictionary<string, Action> quickCastHotkeys = null;
+        private Dictionary<string, Action> onReleaseHotkeys = null;
+
+        // repeatable hotkeys? maybe in the future (additional parameter: repeat interval)
 
         private KeyboardHook keyboardHook = null;
         private List<string> pressedKeys = null;
-        private HashSet<string> nonModifierKeys = null;
+        private HashSet<string> pressedNonModifierKeys = null;
 
         public HotkeyService()
         {
             logger = NLog.LogManager.GetCurrentClassLogger();
 
             keyboardHook = new KeyboardHook();
-            quickCastHotkeys = new Dictionary<string, HotkeyAction>();
-            onReleaseHotkeys = new Dictionary<string, HotkeyAction>();
+
+            hotkeyPressedStates = new Dictionary<string, bool>();
+            quickCastHotkeys = new Dictionary<string, Action>();
+            onReleaseHotkeys = new Dictionary<string, Action>();
             pressedKeys = new List<string>();
-            nonModifierKeys = new HashSet<string>();
+            pressedNonModifierKeys = new HashSet<string>();
 
             StartHook();
         }
@@ -51,15 +58,16 @@ namespace Services.Win32
 
                 var pressedKeysAsConfig = GetPressedKeysAsSetting();
 
-                if (quickCastHotkeys.Any() && quickCastHotkeys.ContainsKey(pressedKeysAsConfig))
+                if (hotkeyPressedStates.ContainsKey(pressedKeysAsConfig))
                 {
-                    if (!quickCastHotkeys[pressedKeysAsConfig].CurrentlyHeld)
-                    {
-                        quickCastHotkeys[pressedKeysAsConfig].CurrentlyHeld = true;
+                    var couldTriggerQuickCast = !hotkeyPressedStates[pressedKeysAsConfig];
+                    hotkeyPressedStates[pressedKeysAsConfig] = true;
 
+                    if (couldTriggerQuickCast && quickCastHotkeys.Any() && quickCastHotkeys.ContainsKey(pressedKeysAsConfig))
+                    {
                         try
                         {
-                            quickCastHotkeys[pressedKeysAsConfig].Action.Invoke();
+                            quickCastHotkeys[pressedKeysAsConfig].Invoke();
                         }
                         catch (Exception ex)
                         {
@@ -68,20 +76,11 @@ namespace Services.Win32
                     }
                 }
 
-                if (onReleaseHotkeys.Any() && onReleaseHotkeys.ContainsKey(pressedKeysAsConfig))
-                {
-                    if (!onReleaseHotkeys[pressedKeysAsConfig].CurrentlyHeld)
-                    {
-                        onReleaseHotkeys[pressedKeysAsConfig].CurrentlyHeld = true;
-                    }
-                }
-
-                logger.Info($"logging key down - lparam: {e.lParam} - key: {e.keyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', nonModifierKeys)}");
+                logger.Info($"logging key down - lparam: {e.lParam} - key: {e.keyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
                 logger.Info($"setting string: {GetPressedKeysAsSetting()}");
 
                 stopwatch.Stop();
                 logger.Info($"processing KeyDown event took: {stopwatch.ElapsedMilliseconds} ms");
-                // testing for key down hotkeys
             }
             else if (e.keyUp)
             {
@@ -93,7 +92,7 @@ namespace Services.Win32
                 if (onReleaseHotkeys.Any())
                 {
                     // only one action per hotkey allowed atm (dictionary), but that may change
-                    var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => h.Value.CurrentlyHeld);
+                    var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
 
                     if (hotkeysWaitingForRelease.Any())
                     {
@@ -101,7 +100,7 @@ namespace Services.Win32
                         {
                             try
                             {
-                                hotkeyAction.Value.Action.Invoke();
+                                hotkeyAction.Value.Invoke();
                             }
                             catch (Exception ex)
                             {
@@ -111,18 +110,12 @@ namespace Services.Win32
                     }
                 }
 
-                foreach (var keyName in onReleaseHotkeys.Keys)
+                foreach (var keyName in hotkeyPressedStates.Keys.ToList())
                 {
-                    onReleaseHotkeys[keyName].CurrentlyHeld = false;
+                    hotkeyPressedStates[keyName] = false;
                 }
 
-                foreach (var keyName in quickCastHotkeys.Keys)
-                {
-                    quickCastHotkeys[keyName].CurrentlyHeld = false;
-                }
-
-
-                logger.Info($"logging key up - lparam: {e.lParam} - key: {e.keyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', nonModifierKeys)}");
+                logger.Info($"logging key up - lparam: {e.lParam} - key: {e.keyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
 
                 stopwatch.Stop();
                 logger.Info($"processing KeyUp event took: {stopwatch.ElapsedMilliseconds} ms");
@@ -136,9 +129,9 @@ namespace Services.Win32
                 pressedKeys.Add(e.keyName);
             }
 
-            if (!nonModifierKeys.Contains(e.keyName) && !keyboardHook.ModifierKeys.Contains(e.keyName))
+            if (!pressedNonModifierKeys.Contains(e.keyName) && !keyboardHook.ModifierKeys.Contains(e.keyName))
             {
-                nonModifierKeys.Add(e.keyName);
+                pressedNonModifierKeys.Add(e.keyName);
             }
         }
 
@@ -149,9 +142,9 @@ namespace Services.Win32
                 pressedKeys.Remove(e.keyName);
             }
 
-            if (nonModifierKeys.Contains(e.keyName))
+            if (pressedNonModifierKeys.Contains(e.keyName))
             {
-                nonModifierKeys.Remove(e.keyName);
+                pressedNonModifierKeys.Remove(e.keyName);
             }
         }
 
@@ -171,11 +164,13 @@ namespace Services.Win32
             keyboardHook.Stop();
         }
 
-        public void AddOrUpdateQuickCastHotkey(string settingString, Contracts.HotkeyAction hotkeyAction)
+        public void AddOrUpdateQuickCastHotkey(string settingString, Action hotkeyAction)
         {
+            AddOrUpdateHotkeyState(settingString);
+
             if (this.quickCastHotkeys.ContainsKey(settingString))
             {
-                this.quickCastHotkeys[settingString].Action = hotkeyAction.Action;
+                this.quickCastHotkeys[settingString] = hotkeyAction;
             }
             else
             {
@@ -183,15 +178,29 @@ namespace Services.Win32
             }
         }
 
-        public void AddOrUpdateOnReleaseHotkey(string settingString, Contracts.HotkeyAction hotkeyAction)
+        public void AddOrUpdateOnReleaseHotkey(string settingString, Action hotkeyAction)
         {
+            AddOrUpdateHotkeyState(settingString);
+
             if (this.onReleaseHotkeys.ContainsKey(settingString))
             {
-                this.onReleaseHotkeys[settingString].Action = hotkeyAction.Action;
+                this.onReleaseHotkeys[settingString] = hotkeyAction;
             }
             else
             {
                 this.onReleaseHotkeys.Add(settingString, hotkeyAction);
+            }
+        }
+
+        private void AddOrUpdateHotkeyState(string settingString)
+        {
+            if (this.hotkeyPressedStates.ContainsKey(settingString))
+            {
+                this.hotkeyPressedStates[settingString] = false;
+            }
+            else
+            {
+                this.hotkeyPressedStates.Add(settingString, false);
             }
         }
     }
