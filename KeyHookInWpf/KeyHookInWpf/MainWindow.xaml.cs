@@ -27,8 +27,8 @@ namespace KeyHookInWpf
     {
         public Logger logger { get; private set; }
 
-        private HotkeyService mahook;
-        private HotkeyService mahook2;
+        private GlobalHotkeyService mahook;
+        private GlobalHotkeyService mahook2;
 
         public MainWindow()
         {
@@ -36,7 +36,7 @@ namespace KeyHookInWpf
 
             logger = NLog.LogManager.GetCurrentClassLogger();
 
-            mahook = new HotkeyService();
+            mahook = new GlobalHotkeyService();
             //mahook2 = new HotkeyService();
 
             mahook.AddOrUpdateOnReleaseHotkey("Pause", () => logger.Info("this was on release!"));

@@ -2,7 +2,7 @@
 
 namespace Services.Contracts
 {
-    public interface IHotkeyService
+    public interface IGlobalHotkeyService
     {
         void StartHook();
         void StopHook();

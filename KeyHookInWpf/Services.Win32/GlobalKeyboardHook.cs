@@ -45,7 +45,7 @@ using System.Windows.Forms;
 
 namespace Services.Win32
 {
-    public class KeyboardHook
+    public class GlobalKeyboardHook
     {
         #region WM_states
         // http://pinvoke.net/default.aspx/Constants.WM
@@ -314,7 +314,7 @@ namespace Services.Win32
 
         #region hook callback method
 
-        private IntPtr MyCallbackFunction(int code, IntPtr wParam, IntPtr lParam)
+        private IntPtr HookCallbackFunction(int code, IntPtr wParam, IntPtr lParam)
         {
             if (code >= 0)
             {
@@ -325,7 +325,7 @@ namespace Services.Win32
                 {
                     try
                     {
-                        KeyEvent?.Invoke(this, new HotkeyServiceHookEventArgs(wParam, lParam));
+                        KeyEvent?.Invoke(this, new GlobalKeyboardHookEventArgs(wParam, lParam));
                     }
                     catch (Exception ex)
                     {
@@ -347,11 +347,11 @@ namespace Services.Win32
         private HookProc myCallbackDelegate = null;
         private readonly NLog.Logger logger = null;
 
-        public event EventHandler<HotkeyServiceHookEventArgs> KeyEvent;
+        public event EventHandler<GlobalKeyboardHookEventArgs> KeyEvent;
         public Guid Guid { get => guid; private set => guid = value; }
         public HashSet<string> ModifierKeys = null;
 
-        public KeyboardHook()
+        public GlobalKeyboardHook()
         {
             ModifierKeys = new HashSet<string>()
             {
@@ -368,7 +368,7 @@ namespace Services.Win32
             };
 
             logger = NLog.LogManager.GetCurrentClassLogger();
-            this.myCallbackDelegate = new HookProc(this.MyCallbackFunction);
+            this.myCallbackDelegate = new HookProc(this.HookCallbackFunction);
         }
 
         public void Start()
@@ -409,7 +409,7 @@ namespace Services.Win32
             logger.Info(string.Format("[{0}] keyboard hook shut down", guid.ToString()));
         }
 
-        public class HotkeyServiceHookEventArgs
+        public class GlobalKeyboardHookEventArgs
         {
             public bool keyDown { get; private set; }
             public bool keyUp { get; private set; }
@@ -420,7 +420,7 @@ namespace Services.Win32
             /// wParam may be WM_KEYDOWN / WM_KEYUP or WM_SYSKEYUP / WM_SYSKEYDOWN
             /// </summary>
             /// <param name="wParam"></param>
-            public HotkeyServiceHookEventArgs(IntPtr wParam, IntPtr lParam)
+            public GlobalKeyboardHookEventArgs(IntPtr wParam, IntPtr lParam)
             {
                 this.keyDown = wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN;
                 this.keyUp = wParam == (IntPtr)WM_KEYUP || wParam == (IntPtr)WM_SYSKEYUP;

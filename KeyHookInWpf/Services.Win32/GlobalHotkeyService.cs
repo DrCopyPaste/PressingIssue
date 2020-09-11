@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Services.Win32
 {
-    public class HotkeyService : IHotkeyService, IDisposable
+    public class GlobalHotkeyService : IGlobalHotkeyService, IDisposable
     {
         private readonly NLog.Logger logger = null;
 
@@ -18,15 +18,15 @@ namespace Services.Win32
 
         // repeatable hotkeys? maybe in the future (additional parameter: repeat interval)
 
-        private KeyboardHook keyboardHook = null;
+        private GlobalKeyboardHook keyboardHook = null;
         private List<string> pressedKeys = null;
         private HashSet<string> pressedNonModifierKeys = null;
 
-        public HotkeyService()
+        public GlobalHotkeyService()
         {
             logger = NLog.LogManager.GetCurrentClassLogger();
 
-            keyboardHook = new KeyboardHook();
+            keyboardHook = new GlobalKeyboardHook();
 
             hotkeyPressedStates = new Dictionary<string, bool>();
             quickCastHotkeys = new Dictionary<string, Action>();
@@ -47,7 +47,7 @@ namespace Services.Win32
             StopHook();
         }
 
-        private void Mahook_KeyEvent(object sender, KeyboardHook.HotkeyServiceHookEventArgs e)
+        private void Mahook_KeyEvent(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
             if (e.keyDown)
             {
@@ -122,7 +122,7 @@ namespace Services.Win32
             }
         }
 
-        private void UpdateNewlyPressedKeys(KeyboardHook.HotkeyServiceHookEventArgs e)
+        private void UpdateNewlyPressedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
             if (!pressedKeys.Contains(e.keyName))
             {
@@ -135,7 +135,7 @@ namespace Services.Win32
             }
         }
 
-        private void UpdateLiftedKeys(KeyboardHook.HotkeyServiceHookEventArgs e)
+        private void UpdateLiftedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
             if (pressedKeys.Contains(e.keyName))
             {
