@@ -21,11 +21,11 @@ namespace KeyHookInWpf
         public MainWindow()
         {
             InitializeComponent();
-            SetModeText();
             logger = NLog.LogManager.GetCurrentClassLogger();
-
             hotkeyService = new GlobalHotkeyService();
             hotkeyService.KeyEvent += Mahook_CustomEvent;
+
+            SetModeText();
 
             //hotkeyService2 = new HotkeyService();
 

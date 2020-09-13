@@ -101,6 +101,11 @@ namespace Services.Win32
                     ProcessHotkeysKeyUp();
                 }
 
+                foreach (var keyName in hotkeyPressedStates.Keys.ToList())
+                {
+                    hotkeyPressedStates[keyName] = false;
+                }
+
                 HandleCustomEvent(e, pressedKeysAsConfig);
                 logger.Info($"processing lifted keys and invoking custom event took: {stopwatch.ElapsedMilliseconds} ms");
                 logger.Info($"logging key up - lparam: {e.Key} - key: {e.KeyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
@@ -142,11 +147,6 @@ namespace Services.Win32
                         }
                     }
                 }
-            }
-
-            foreach (var keyName in hotkeyPressedStates.Keys.ToList())
-            {
-                hotkeyPressedStates[keyName] = false;
             }
         }
 
