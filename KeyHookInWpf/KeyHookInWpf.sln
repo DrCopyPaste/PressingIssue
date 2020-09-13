@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KeyHookInWpf", "KeyHookInWp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Services.Contracts", "Services.Contracts\Services.Contracts.csproj", "{8270C330-5BC3-4956-8D14-21D07DC143EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Services.Win32", "Services.Win32\Services.Win32.csproj", "{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Services.Win32", "Services.Win32\Services.Win32.csproj", "{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestClient_SimpleGlobalHotkeyService", "TestClient.SimpleGlobalHotkeyService\TestClient_SimpleGlobalHotkeyService.csproj", "{5A071F8E-5B13-426C-A4DC-61869569B043}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3141A22D-6D3B-4ED9-BA88-178BADAC2B2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A071F8E-5B13-426C-A4DC-61869569B043}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A071F8E-5B13-426C-A4DC-61869569B043}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A071F8E-5B13-426C-A4DC-61869569B043}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A071F8E-5B13-426C-A4DC-61869569B043}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
