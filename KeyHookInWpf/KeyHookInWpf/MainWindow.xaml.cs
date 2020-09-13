@@ -15,23 +15,21 @@ namespace KeyHookInWpf
     {
         public Logger logger { get; private set; }
 
-        private GlobalHotkeyService mahook;
-        private GlobalHotkeyService mahook2;
+        private GlobalHotkeyService hotkeyService;
+        //private GlobalHotkeyService hotkeyService2;
 
         public MainWindow()
         {
             InitializeComponent();
-
+            SetModeText();
             logger = NLog.LogManager.GetCurrentClassLogger();
 
-            mahook = new GlobalHotkeyService();
+            hotkeyService = new GlobalHotkeyService();
+            hotkeyService.KeyEvent += Mahook_CustomEvent;
 
-            mahook.KeyEvent += Mahook_CustomEvent;
-            SetModeText();
+            //hotkeyService2 = new HotkeyService();
 
-            //mahook2 = new HotkeyService();
-
-            mahook.AddOrUpdateOnReleaseHotkey(
+            hotkeyService.AddOrUpdateOnReleaseHotkey(
                 "Pause",
                 () =>
                 {
@@ -43,11 +41,7 @@ namespace KeyHookInWpf
                     Eventlines.Text = stringBuilder.ToString();
                 });
 
-            /*
-            mahook.AddOrUpdateOnReleaseHotkey(Guid.NewGuid().ToString(), new Services.Contracts.HotkeyAction() { Action = () => logger.Info("this was on release!") });
-            */
-
-            mahook.AddOrUpdateQuickCastHotkey(
+            hotkeyService.AddOrUpdateQuickCastHotkey(
                 "F12",
                 () =>
                 {
@@ -59,23 +53,7 @@ namespace KeyHookInWpf
                     Eventlines.Text = stringBuilder.ToString();
                 });
 
-            /*
-            mahook.AddOrUpdateQuickCastHotkey(Guid.NewGuid().ToString(), new Services.Contracts.HotkeyAction() { Action = () => logger.Info("this was with quickcast!") });
-            */
-
-
-
-
-
-
             this.Closing += MainWindow_Closing;
-
-            //var logger = NLog.LogManager.GetCurrentClassLogger();
-            //logger.Info("this is a test from main");
-
-            /*
-            
-             */
         }
 
         private void Mahook_CustomEvent(object sender, GlobalHotkeyServiceEventArgs e)
@@ -85,26 +63,26 @@ namespace KeyHookInWpf
 
         void MainWindow_Closing(object sender, CancelEventArgs e)
         {
-            mahook.Dispose();
-            //mahook2.Dispose();
+            hotkeyService.Dispose();
+            //hotkeyService2.Dispose();
         }
 
         private void SetModeText()
         {
             this.ToggleModeButton.Content = "Toggle Mode";
-            this.CurrentMode.Content = mahook.ProcessingHotkeys ? "Capturing hotkeys" : "Not capturing hotkeys";
+            this.CurrentMode.Content = hotkeyService.ProcessingHotkeys ? "Capturing hotkeys" : "Not capturing hotkeys";
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            var previousMode = mahook.ProcessingHotkeys;
+            var previousMode = hotkeyService.ProcessingHotkeys;
 
-            if (mahook.Running)
+            if (hotkeyService.Running)
             {
-                mahook.Stop();
+                hotkeyService.Stop();
             }
 
-            mahook.Start(!previousMode);
+            hotkeyService.Start(!previousMode);
             SetModeText();
         }
     }
