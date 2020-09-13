@@ -101,15 +101,20 @@ namespace Services.Win32
                     ProcessHotkeysKeyUp();
                 }
 
-                foreach (var keyName in hotkeyPressedStates.Keys.ToList())
-                {
-                    hotkeyPressedStates[keyName] = false;
-                }
+                ResetHotkeyPressedStates();
 
                 HandleCustomEvent(e, pressedKeysAsConfig);
                 logger.Info($"processing lifted keys and invoking custom event took: {stopwatch.ElapsedMilliseconds} ms");
                 logger.Info($"logging key up - lparam: {e.Key} - key: {e.KeyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
                 logger.Info($"processing KeyUp event took: {stopwatch.ElapsedMilliseconds} ms");
+            }
+        }
+
+        private void ResetHotkeyPressedStates()
+        {
+            foreach (var keyName in hotkeyPressedStates.Keys.ToList())
+            {
+                hotkeyPressedStates[keyName] = false;
             }
         }
 
@@ -168,6 +173,10 @@ namespace Services.Win32
                         logger.Error(ex, $"An error occurred trying to trigger action for quick cast hotkey '{pressedKeysAsConfig}'");
                     }
                 }
+            }
+            else
+            {
+                ResetHotkeyPressedStates();
             }
         }
 
