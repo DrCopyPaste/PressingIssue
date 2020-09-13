@@ -7,6 +7,12 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
+        <Button Content="Text" Name="ToggleModeButton" HorizontalAlignment="Left" Margin="603,10,0,0" VerticalAlignment="Top" Click="Button_Click" RenderTransformOrigin="-0.331,1.663"/>
+        <Label Name="ShownKeys"  Content="CurrentPressedKeys" HorizontalAlignment="Left" Margin="158,143,0,0" VerticalAlignment="Top"/>
+        <Label Name="CurrentMode"  Content="CurrentMode" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" RenderTransformOrigin="2.658,2.38"/>
+        <ScrollViewer Margin="0,273,0,0" VerticalAlignment="Top" Width="780" Height="141">
+        <TextBlock x:Name="Eventlines" Text=""  HorizontalAlignment="Left"/>
+        </ScrollViewer>
 
     </Grid>
 </Window>

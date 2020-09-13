@@ -3,12 +3,17 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Windows.Forms;
 
 namespace Services.Win32
 {
     public class GlobalHotkeyService : IGlobalHotkeyService, IDisposable
     {
         private readonly NLog.Logger logger = null;
+
+        public event EventHandler<GlobalHotkeyServiceEventArgs> KeyEvent;
+
+        public HashSet<string> ModifierKeys { get; private set; }
 
         // key = hotkeysettingstring, value = currently held down
         private Dictionary<string, bool> hotkeyPressedStates = null;
@@ -22,9 +27,26 @@ namespace Services.Win32
         private List<string> pressedKeys = null;
         private HashSet<string> pressedNonModifierKeys = null;
 
+        public bool Running { get; private set; } = false;
+        public bool ProcessingHotkeys { get; set; } = true;
+
         public GlobalHotkeyService()
         {
             logger = NLog.LogManager.GetCurrentClassLogger();
+
+            ModifierKeys = new HashSet<string>()
+            {
+                Keys.Control.ToString(),
+                Keys.LControlKey.ToString(),
+                Keys.RControlKey.ToString(),
+                Keys.LWin.ToString(),
+                Keys.RWin.ToString(),
+                Keys.Alt.ToString(),
+                Keys.LMenu.ToString(),
+                Keys.RMenu.ToString(),
+                Keys.RShiftKey.ToString(),
+                Keys.LShiftKey.ToString(),
+            };
 
             keyboardHook = new GlobalKeyboardHook();
 
@@ -34,134 +56,160 @@ namespace Services.Win32
             pressedKeys = new List<string>();
             pressedNonModifierKeys = new HashSet<string>();
 
-            StartHook();
+            Start();
         }
 
-        public string GetPressedKeysAsSetting()
+        private string GetPressedKeysAsSetting(List<string> pressedKeys)
         {
             return string.Join('-', pressedKeys.OrderBy(k => k).ToList());
         }
 
         public void Dispose()
         {
-            StopHook();
+            Stop();
         }
 
-        private void Mahook_KeyEvent(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
+        private void ProcessKeys_Event(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            if (e.keyDown)
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            if (e.KeyDown)
             {
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-
                 UpdateNewlyPressedKeys(e);
+                var pressedKeysAsConfig = GetPressedKeysAsSetting(pressedKeys);
 
-                var pressedKeysAsConfig = GetPressedKeysAsSetting();
-
-                if (hotkeyPressedStates.ContainsKey(pressedKeysAsConfig))
+                if (ProcessingHotkeys)
                 {
-                    var couldTriggerQuickCast = !hotkeyPressedStates[pressedKeysAsConfig];
-                    hotkeyPressedStates[pressedKeysAsConfig] = true;
+                    ProcessHotkeysKeyDown(pressedKeysAsConfig);
+                }
 
-                    if (couldTriggerQuickCast && quickCastHotkeys.Any() && quickCastHotkeys.ContainsKey(pressedKeysAsConfig))
+                HandleCustomEvent(e, pressedKeysAsConfig);
+                logger.Info($"processing pressed keys and invoking custom event took: {stopwatch.ElapsedMilliseconds} ms");
+
+                logger.Info($"logging key down - lparam: {e.Key} - key: {e.KeyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
+                logger.Info($"setting string: {pressedKeysAsConfig}");
+                logger.Info($"processing KeyDown event took: {stopwatch.ElapsedMilliseconds} ms");
+            }
+            else if (e.KeyUp)
+            {
+                UpdateLiftedKeys(e);
+                var pressedKeysAsConfig = GetPressedKeysAsSetting(pressedKeys);
+
+                if (ProcessingHotkeys)
+                {
+                    ProcessHotkeysKeyUp();
+                }
+
+                HandleCustomEvent(e, pressedKeysAsConfig);
+                logger.Info($"processing lifted keys and invoking custom event took: {stopwatch.ElapsedMilliseconds} ms");
+                logger.Info($"logging key up - lparam: {e.Key} - key: {e.KeyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
+                logger.Info($"processing KeyUp event took: {stopwatch.ElapsedMilliseconds} ms");
+            }
+        }
+
+        private void HandleCustomEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
+        {
+            try
+            {
+                KeyEvent?.Invoke(this, new GlobalHotkeyServiceEventArgs(e.KeyDown, pressedKeys, pressedNonModifierKeys, pressedKeysAsConfig));
+            }
+            catch (Exception ex)
+            {
+                // "silently" ignore any errors when triggering events
+                logger.Error(ex, "An error occurred trying to trigger the custom hotkeyservice event.");
+            }
+        }
+
+        private void ProcessHotkeysKeyUp()
+        {
+            if (onReleaseHotkeys.Any())
+            {
+                // only one action per hotkey allowed atm (dictionary), but that may change
+                var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
+
+                if (hotkeysWaitingForRelease.Any())
+                {
+                    foreach (var hotkeyAction in hotkeysWaitingForRelease)
                     {
                         try
                         {
-                            quickCastHotkeys[pressedKeysAsConfig].Invoke();
+                            hotkeyAction.Value.Invoke();
                         }
                         catch (Exception ex)
                         {
-                            logger.Error(ex, $"An error occurred trying to trigger action for quick cast hotkey '{pressedKeysAsConfig}'");
+                            logger.Error(ex, $"An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
                         }
                     }
                 }
-
-                logger.Info($"logging key down - lparam: {e.lParam} - key: {e.keyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
-                logger.Info($"setting string: {GetPressedKeysAsSetting()}");
-
-                stopwatch.Stop();
-                logger.Info($"processing KeyDown event took: {stopwatch.ElapsedMilliseconds} ms");
             }
-            else if (e.keyUp)
+
+            foreach (var keyName in hotkeyPressedStates.Keys.ToList())
             {
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
+                hotkeyPressedStates[keyName] = false;
+            }
+        }
 
-                UpdateLiftedKeys(e);
+        private void ProcessHotkeysKeyDown(string pressedKeysAsConfig)
+        {
+            if (hotkeyPressedStates.ContainsKey(pressedKeysAsConfig))
+            {
+                var couldTriggerQuickCast = !hotkeyPressedStates[pressedKeysAsConfig];
+                hotkeyPressedStates[pressedKeysAsConfig] = true;
 
-                if (onReleaseHotkeys.Any())
+                if (couldTriggerQuickCast && quickCastHotkeys.Any() && quickCastHotkeys.ContainsKey(pressedKeysAsConfig))
                 {
-                    // only one action per hotkey allowed atm (dictionary), but that may change
-                    var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
-
-                    if (hotkeysWaitingForRelease.Any())
+                    try
                     {
-                        foreach (var hotkeyAction in hotkeysWaitingForRelease)
-                        {
-                            try
-                            {
-                                hotkeyAction.Value.Invoke();
-                            }
-                            catch (Exception ex)
-                            {
-                                logger.Error(ex, $"An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
-                            }
-                        }
+                        quickCastHotkeys[pressedKeysAsConfig].Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, $"An error occurred trying to trigger action for quick cast hotkey '{pressedKeysAsConfig}'");
                     }
                 }
-
-                foreach (var keyName in hotkeyPressedStates.Keys.ToList())
-                {
-                    hotkeyPressedStates[keyName] = false;
-                }
-
-                logger.Info($"logging key up - lparam: {e.lParam} - key: {e.keyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
-
-                stopwatch.Stop();
-                logger.Info($"processing KeyUp event took: {stopwatch.ElapsedMilliseconds} ms");
             }
         }
 
         private void UpdateNewlyPressedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            if (!pressedKeys.Contains(e.keyName))
+            if (!pressedKeys.Contains(e.KeyName))
             {
-                pressedKeys.Add(e.keyName);
+                pressedKeys.Add(e.KeyName);
             }
 
-            if (!pressedNonModifierKeys.Contains(e.keyName) && !keyboardHook.ModifierKeys.Contains(e.keyName))
+            if (!pressedNonModifierKeys.Contains(e.KeyName) && !ModifierKeys.Contains(e.KeyName))
             {
-                pressedNonModifierKeys.Add(e.keyName);
+                pressedNonModifierKeys.Add(e.KeyName);
             }
         }
 
         private void UpdateLiftedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            if (pressedKeys.Contains(e.keyName))
+            if (pressedKeys.Contains(e.KeyName))
             {
-                pressedKeys.Remove(e.keyName);
+                pressedKeys.Remove(e.KeyName);
             }
 
-            if (pressedNonModifierKeys.Contains(e.keyName))
+            if (pressedNonModifierKeys.Contains(e.KeyName))
             {
-                pressedNonModifierKeys.Remove(e.keyName);
+                pressedNonModifierKeys.Remove(e.KeyName);
             }
         }
 
-        public string GetCurrentKeysPressed()
+        public void Start(bool processHotkeys = true)
         {
-            throw new NotImplementedException();
-        }
-
-        public void StartHook()
-        {
-            keyboardHook.KeyEvent += Mahook_KeyEvent;
+            ProcessingHotkeys = processHotkeys;
+            keyboardHook.KeyEvent += ProcessKeys_Event;
             keyboardHook.Start();
+            Running = true;
         }
 
-        public void StopHook()
+        public void Stop()
         {
             keyboardHook.Stop();
+            keyboardHook.KeyEvent -= ProcessKeys_Event;
+            Running = false;
         }
 
         public void AddOrUpdateQuickCastHotkey(string settingString, Action hotkeyAction)

@@ -316,6 +316,9 @@ namespace Services.Win32
 
         private IntPtr HookCallbackFunction(int code, IntPtr wParam, IntPtr lParam)
         {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             if (code >= 0)
             {
                 // WM_KEYDOWN / WM_KEYUP capture most key events
@@ -326,6 +329,7 @@ namespace Services.Win32
                     try
                     {
                         KeyEvent?.Invoke(this, new GlobalKeyboardHookEventArgs(wParam, lParam));
+                        logger.Info($"invoking keyevent took: {stopwatch.ElapsedMilliseconds} ms");
                     }
                     catch (Exception ex)
                     {
@@ -334,6 +338,9 @@ namespace Services.Win32
                     }
                 }
             }
+
+            stopwatch.Stop();
+            logger.Info($"processing HookCallbackFunction took: {stopwatch.ElapsedMilliseconds} ms");
 
             //you need to call CallNextHookEx without further processing
             //and return the value returned by CallNextHookEx
@@ -349,24 +356,9 @@ namespace Services.Win32
 
         public event EventHandler<GlobalKeyboardHookEventArgs> KeyEvent;
         public Guid Guid { get => guid; private set => guid = value; }
-        public HashSet<string> ModifierKeys = null;
 
         public GlobalKeyboardHook()
         {
-            ModifierKeys = new HashSet<string>()
-            {
-                Keys.Control.ToString(),
-                Keys.LControlKey.ToString(),
-                Keys.RControlKey.ToString(),
-                Keys.LWin.ToString(),
-                Keys.RWin.ToString(),
-                Keys.Alt.ToString(),
-                Keys.LMenu.ToString(),
-                Keys.RMenu.ToString(),
-                Keys.RShiftKey.ToString(),
-                Keys.LShiftKey.ToString(),
-            };
-
             logger = NLog.LogManager.GetCurrentClassLogger();
             this.myCallbackDelegate = new HookProc(this.HookCallbackFunction);
         }
@@ -403,18 +395,16 @@ namespace Services.Win32
                 }
 
                 currentHook = IntPtr.Zero;
+                logger.Info(string.Format("[{0}] keyboard hook shut down", guid.ToString()));
             }
-
-            UnhookWindowsHookEx(currentHook);
-            logger.Info(string.Format("[{0}] keyboard hook shut down", guid.ToString()));
         }
 
         public class GlobalKeyboardHookEventArgs
         {
-            public bool keyDown { get; private set; }
-            public bool keyUp { get; private set; }
-            public int lParam { get; private set; }
-            public string keyName { get; private set; }
+            public bool KeyDown { get; private set; }
+            public bool KeyUp { get; private set; }
+            public int Key { get; private set; }
+            public string KeyName { get; private set; }
 
             /// <summary>
             /// wParam may be WM_KEYDOWN / WM_KEYUP or WM_SYSKEYUP / WM_SYSKEYDOWN
@@ -422,15 +412,15 @@ namespace Services.Win32
             /// <param name="wParam"></param>
             public GlobalKeyboardHookEventArgs(IntPtr wParam, IntPtr lParam)
             {
-                this.keyDown = wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN;
-                this.keyUp = wParam == (IntPtr)WM_KEYUP || wParam == (IntPtr)WM_SYSKEYUP;
+                this.KeyDown = wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN;
+                this.KeyUp = wParam == (IntPtr)WM_KEYUP || wParam == (IntPtr)WM_SYSKEYUP;
 
-                this.lParam = Marshal.ReadInt32(lParam);
+                this.Key = Marshal.ReadInt32(lParam);
 
                 // seems OP to include System.Windows.Forms just for this
                 // but this enum is EXACTLY what we need to map lParam to something sensible
                 // one COULD of course also just copy the enum from https://github.com/dotnet/winforms/blob/master/src/System.Windows.Forms/src/System/Windows/Forms/Keys.cs
-                keyName = ((Keys)this.lParam).ToString();
+                KeyName = ((Keys)this.Key).ToString();
             }
         }
     }

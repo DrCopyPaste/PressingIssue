@@ -1,22 +1,10 @@
 ﻿using NLog;
+using Services.Contracts;
 using Services.Win32;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Forms;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace KeyHookInWpf
 {
@@ -37,21 +25,45 @@ namespace KeyHookInWpf
             logger = NLog.LogManager.GetCurrentClassLogger();
 
             mahook = new GlobalHotkeyService();
+
+            mahook.KeyEvent += Mahook_CustomEvent;
+            SetModeText();
+
             //mahook2 = new HotkeyService();
 
-            mahook.AddOrUpdateOnReleaseHotkey("Pause", () => logger.Info("this was on release!"));
+            mahook.AddOrUpdateOnReleaseHotkey(
+                "Pause",
+                () =>
+                {
+                    logger.Info("this was on release!");
+
+                    var stringBuilder = new StringBuilder(Eventlines.Text);
+                    stringBuilder.Insert(0, $"{DateTime.Now:yyyy-MM-dd hh:mm:ss.fff} [Pause] hotkey triggered on release\n");
+
+                    Eventlines.Text = stringBuilder.ToString();
+                });
 
             /*
             mahook.AddOrUpdateOnReleaseHotkey(Guid.NewGuid().ToString(), new Services.Contracts.HotkeyAction() { Action = () => logger.Info("this was on release!") });
             */
 
-            mahook.AddOrUpdateQuickCastHotkey("F12", () => logger.Info("this was with quickcast!"));
+            mahook.AddOrUpdateQuickCastHotkey(
+                "F12",
+                () =>
+                {
+                    logger.Info("this was with quickcast!");
+
+                    var stringBuilder = new StringBuilder(Eventlines.Text);
+                    stringBuilder.Insert(0, $"{DateTime.Now:yyyy-MM-dd hh:mm:ss.fff} [F12] hotkey triggered on quickcast (key down - no repeat) \n");
+
+                    Eventlines.Text = stringBuilder.ToString();
+                });
 
             /*
             mahook.AddOrUpdateQuickCastHotkey(Guid.NewGuid().ToString(), new Services.Contracts.HotkeyAction() { Action = () => logger.Info("this was with quickcast!") });
             */
 
-            
+
 
 
 
@@ -66,12 +78,34 @@ namespace KeyHookInWpf
              */
         }
 
-        
+        private void Mahook_CustomEvent(object sender, GlobalHotkeyServiceEventArgs e)
+        {
+            this.ShownKeys.Content = e.AsSettingString;
+        }
 
         void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             mahook.Dispose();
             //mahook2.Dispose();
+        }
+
+        private void SetModeText()
+        {
+            this.ToggleModeButton.Content = "Toggle Mode";
+            this.CurrentMode.Content = mahook.ProcessingHotkeys ? "Capturing hotkeys" : "Not capturing hotkeys";
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            var previousMode = mahook.ProcessingHotkeys;
+
+            if (mahook.Running)
+            {
+                mahook.Stop();
+            }
+
+            mahook.Start(!previousMode);
+            SetModeText();
         }
     }
 }
