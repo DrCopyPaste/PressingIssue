@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace Services.Win32
 {
-    public class GlobalHotkeyService : IGlobalHotkeyService, IDisposable
+    public class MultiKeyGlobalHotkeyService : IMultiKeyGlobalHotkeyService, IDisposable
     {
         private readonly NLog.Logger logger = null;
         private readonly GlobalKeyboardHook keyboardHook = null;
@@ -22,11 +22,11 @@ namespace Services.Win32
         private readonly List<string> pressedKeys = null;
         private readonly HashSet<string> pressedNonModifierKeys = null;
 
-        public event EventHandler<GlobalHotkeyServiceEventArgs> KeyEvent;
+        public event EventHandler<MultiKeyGlobalHotkeyServiceEventArgs> KeyEvent;
         public bool Running { get; private set; } = false;
         public bool ProcessingHotkeys { get; set; } = true;
 
-        public GlobalHotkeyService()
+        public MultiKeyGlobalHotkeyService()
         {
             logger = NLog.LogManager.GetCurrentClassLogger();
 
@@ -55,7 +55,7 @@ namespace Services.Win32
             Start();
         }
 
-        private void ProcessKeys_Event(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
+        private void KeyboardHookEvent(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -67,15 +67,13 @@ namespace Services.Win32
 
                 if (ProcessingHotkeys)
                 {
-                    ProcessHotkeysKeyDown(pressedKeysAsConfig);
+                    ProcessHotkeysDown(pressedKeysAsConfig);
                 }
 
-                HandleCustomEvent(e, pressedKeysAsConfig);
-                logger.Info($"processing pressed keys and invoking custom event took: {stopwatch.ElapsedMilliseconds} ms");
+                KeyChangedEvent(e, pressedKeysAsConfig);
 
-                logger.Info($"logging key down - lparam: {e.Key} - key: {e.KeyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
-                logger.Info($"setting string: {pressedKeysAsConfig}");
-                logger.Info($"processing KeyDown event took: {stopwatch.ElapsedMilliseconds} ms");
+                logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} monitored keys pressed: ({string.Join('-', pressedKeys)}) non modifiers: ({string.Join('-', pressedNonModifierKeys)})");
+                logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} processed KeyDown event with setting string {pressedKeysAsConfig} and took: {stopwatch.ElapsedMilliseconds} ms");
             }
             else if (e.KeyUp)
             {
@@ -84,28 +82,28 @@ namespace Services.Win32
 
                 if (ProcessingHotkeys)
                 {
-                    ProcessHotkeysKeyUp();
+                    ProcessHotkeysUp();
                 }
 
+                // ensure hotkeys are not pressed even if not in ProcessingHotkeys mode
                 ResetHotkeyPressedStates();
 
-                HandleCustomEvent(e, pressedKeysAsConfig);
-                logger.Info($"processing lifted keys and invoking custom event took: {stopwatch.ElapsedMilliseconds} ms");
-                logger.Info($"logging key up - lparam: {e.Key} - key: {e.KeyName} - all keys down: {string.Join('-', pressedKeys)} - without modifiers: {string.Join('-', pressedNonModifierKeys)}");
-                logger.Info($"processing KeyUp event took: {stopwatch.ElapsedMilliseconds} ms");
+                KeyChangedEvent(e, pressedKeysAsConfig);
+                logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} monitored keys pressed: ({string.Join('-', pressedKeys)}) non modifiers: ({string.Join('-', pressedNonModifierKeys)})");
+                logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} processed KeyUp event with setting string {pressedKeysAsConfig} and took: {stopwatch.ElapsedMilliseconds} ms");
             }
         }
 
-        private void HandleCustomEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
+        private void KeyChangedEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
         {
             try
             {
-                KeyEvent?.Invoke(this, new GlobalHotkeyServiceEventArgs(e.KeyDown, pressedKeys, pressedNonModifierKeys, pressedKeysAsConfig));
+                KeyEvent?.Invoke(this, new MultiKeyGlobalHotkeyServiceEventArgs(e.KeyDown, pressedKeys, pressedNonModifierKeys, pressedKeysAsConfig));
             }
             catch (Exception ex)
             {
                 // "silently" ignore any errors when triggering events
-                logger.Error(ex, "An error occurred trying to trigger the custom hotkeyservice event.");
+                logger.Error(ex, $"{nameof(MultiKeyGlobalHotkeyService)} An error occurred trying to trigger the custom hotkeyservice event.");
             }
         }
 
@@ -134,7 +132,7 @@ namespace Services.Win32
             return string.Join('-', pressedKeys.OrderBy(k => k).ToList());
         }
 
-        private void ProcessHotkeysKeyDown(string pressedKeysAsConfig)
+        private void ProcessHotkeysDown(string pressedKeysAsConfig)
         {
             if (hotkeyPressedStates.ContainsKey(pressedKeysAsConfig))
             {
@@ -149,7 +147,7 @@ namespace Services.Win32
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(ex, $"An error occurred trying to trigger action for quick cast hotkey '{pressedKeysAsConfig}'");
+                        logger.Error(ex, $"{nameof(MultiKeyGlobalHotkeyService)} An error occurred trying to trigger action for quick cast hotkey '{pressedKeysAsConfig}'");
                     }
                 }
             }
@@ -159,7 +157,7 @@ namespace Services.Win32
             }
         }
 
-        private void ProcessHotkeysKeyUp()
+        private void ProcessHotkeysUp()
         {
             if (onReleaseHotkeys.Any())
             {
@@ -176,7 +174,7 @@ namespace Services.Win32
                         }
                         catch (Exception ex)
                         {
-                            logger.Error(ex, $"An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
+                            logger.Error(ex, $"{nameof(MultiKeyGlobalHotkeyService)} An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
                         }
                     }
                 }
@@ -212,7 +210,7 @@ namespace Services.Win32
         public void Start(bool processHotkeys = true)
         {
             ProcessingHotkeys = processHotkeys;
-            keyboardHook.KeyEvent += ProcessKeys_Event;
+            keyboardHook.KeyEvent += KeyboardHookEvent;
             keyboardHook.Start();
             Running = true;
         }
@@ -220,7 +218,7 @@ namespace Services.Win32
         public void Stop()
         {
             keyboardHook.Stop();
-            keyboardHook.KeyEvent -= ProcessKeys_Event;
+            keyboardHook.KeyEvent -= KeyboardHookEvent;
             Running = false;
         }
 

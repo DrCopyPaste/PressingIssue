@@ -260,7 +260,7 @@ namespace Services.Win32
             Start();
         }
 
-        private void ProcessKeys_Event(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
+        private void KeyboardHookEvent(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -271,31 +271,29 @@ namespace Services.Win32
 
                 if (ProcessingHotkeys)
                 {
-                    ProcessHotkeysKeyDown(pressedKeysAsConfig);
+                    ProcessHotkeysDown(pressedKeysAsConfig);
                 }
 
-                HandleCustomEvent(e, pressedKeysAsConfig);
-                logger.Info($"processing pressed keys and invoking custom event took: {stopwatch.ElapsedMilliseconds} ms");
-                logger.Info($"setting string: {pressedKeysAsConfig}");
-                logger.Info($"processing KeyDown event took: {stopwatch.ElapsedMilliseconds} ms");
+                KeyChangedEvent(e, pressedKeysAsConfig);
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyDown event with setting string {pressedKeysAsConfig} and took: {stopwatch.ElapsedMilliseconds} ms");
             }
             else if (e.KeyUp)
             {
                 if (ProcessingHotkeys)
                 {
-                    ProcessHotkeysKeyUp();
+                    ProcessHotkeysUp();
                 }
 
+                // ensure hotkeys are not pressed even if not in ProcessingHotkeys mode
                 ResetHotkeyPressedStates();
                 var pressedKeysAsConfig = GetPressedKeysAsSetting(e);
 
-                HandleCustomEvent(e, pressedKeysAsConfig);
-                logger.Info($"processing lifted keys and invoking custom event took: {stopwatch.ElapsedMilliseconds} ms");
-                logger.Info($"processing KeyUp event took: {stopwatch.ElapsedMilliseconds} ms");
+                KeyChangedEvent(e, pressedKeysAsConfig);
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyUp event with setting string {pressedKeysAsConfig} and took: {stopwatch.ElapsedMilliseconds} ms");
             }
         }
 
-        private void HandleCustomEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
+        private void KeyChangedEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
         {
             try
             {
@@ -304,7 +302,7 @@ namespace Services.Win32
             catch (Exception ex)
             {
                 // "silently" ignore any errors when triggering events
-                logger.Error(ex, "An error occurred trying to trigger the custom hotkeyservice event.");
+                logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} An error occurred trying to trigger the custom hotkeyservice event.");
             }
         }
 
@@ -347,7 +345,7 @@ namespace Services.Win32
             }
         }
 
-        private void ProcessHotkeysKeyDown(string pressedKeysAsConfig)
+        private void ProcessHotkeysDown(string pressedKeysAsConfig)
         {
             if (hotkeyPressedStates.ContainsKey(pressedKeysAsConfig))
             {
@@ -362,7 +360,7 @@ namespace Services.Win32
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(ex, $"An error occurred trying to trigger action for quick cast hotkey '{pressedKeysAsConfig}'");
+                        logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} An error occurred trying to trigger action for quick cast hotkey '{pressedKeysAsConfig}'");
                     }
                 }
             }
@@ -372,7 +370,7 @@ namespace Services.Win32
             }
         }
 
-        private void ProcessHotkeysKeyUp()
+        private void ProcessHotkeysUp()
         {
             if (onReleaseHotkeys.Any())
             {
@@ -389,7 +387,7 @@ namespace Services.Win32
                         }
                         catch (Exception ex)
                         {
-                            logger.Error(ex, $"An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
+                            logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
                         }
                     }
                 }
@@ -399,7 +397,7 @@ namespace Services.Win32
         public void Start(bool processHotkeys = true)
         {
             ProcessingHotkeys = processHotkeys;
-            keyboardHook.KeyEvent += ProcessKeys_Event;
+            keyboardHook.KeyEvent += KeyboardHookEvent;
             keyboardHook.Start();
             Running = true;
         }
@@ -407,7 +405,7 @@ namespace Services.Win32
         public void Stop()
         {
             keyboardHook.Stop();
-            keyboardHook.KeyEvent -= ProcessKeys_Event;
+            keyboardHook.KeyEvent -= KeyboardHookEvent;
             Running = false;
         }
 

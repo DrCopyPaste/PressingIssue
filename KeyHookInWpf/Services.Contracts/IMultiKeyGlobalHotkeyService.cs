@@ -3,14 +3,14 @@ using System;
 
 namespace Services.Contracts
 {
-    public interface IGlobalHotkeyService
+    public interface IMultiKeyGlobalHotkeyService
     {
         bool ProcessingHotkeys { get; set; }
         bool Running { get; }
 
         // you can attach to this to do additional actions on key down/up
         // but it is not needed for processing hotkeys
-        event EventHandler<GlobalHotkeyServiceEventArgs> KeyEvent;
+        event EventHandler<MultiKeyGlobalHotkeyServiceEventArgs> KeyEvent;
 
         void Start(bool processingHotkeys = true);
         void Stop();

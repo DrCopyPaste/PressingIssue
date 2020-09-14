@@ -16,14 +16,14 @@ namespace KeyHookInWpf
     {
         private readonly Logger logger = null;
 
-        private readonly GlobalHotkeyService hotkeyService;
+        private readonly MultiKeyGlobalHotkeyService hotkeyService;
         //private GlobalHotkeyService hotkeyService2;
 
         public MainWindow()
         {
             InitializeComponent();
             logger = NLog.LogManager.GetCurrentClassLogger();
-            hotkeyService = new GlobalHotkeyService();
+            hotkeyService = new MultiKeyGlobalHotkeyService();
             hotkeyService.KeyEvent += Mahook_CustomEvent;
 
             SetModeText();
@@ -57,7 +57,7 @@ namespace KeyHookInWpf
             this.Closing += MainWindow_Closing;
         }
 
-        private void Mahook_CustomEvent(object sender, GlobalHotkeyServiceEventArgs e)
+        private void Mahook_CustomEvent(object sender, MultiKeyGlobalHotkeyServiceEventArgs e)
         {
             this.ShownKeys.Content = e.AsSettingString;
         }

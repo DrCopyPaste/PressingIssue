@@ -329,18 +329,18 @@ namespace Services.Win32
                     try
                     {
                         KeyEvent?.Invoke(this, new GlobalKeyboardHookEventArgs(wParam, lParam));
-                        logger.Info($"invoking keyevent took: {stopwatch.ElapsedMilliseconds} ms");
+                        logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] invoking keyevent took: {stopwatch.ElapsedMilliseconds} ms");
                     }
                     catch (Exception ex)
                     {
                         // "silently" ignore any errors when triggering key hook events
-                        logger.Error(ex, "An error occurred trying to trigger the key hook event.");
+                        logger.Error(ex, $"{nameof(GlobalKeyboardHook)} [{Guid}] An error occurred trying to trigger the key hook event.");
                     }
                 }
             }
 
             stopwatch.Stop();
-            logger.Info($"processing HookCallbackFunction took: {stopwatch.ElapsedMilliseconds} ms");
+            logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] processing HookCallbackFunction took: {stopwatch.ElapsedMilliseconds} ms");
 
             //you need to call CallNextHookEx without further processing
             //and return the value returned by CallNextHookEx
@@ -366,7 +366,7 @@ namespace Services.Win32
         public void Start()
         {
             Guid = Guid.NewGuid();
-            logger.Info($"[{Guid.ToString()}] keyboard hook started");
+            logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] started.");
 
             using (Process process = Process.GetCurrentProcess())
             using (ProcessModule module = process.MainModule)
@@ -377,7 +377,7 @@ namespace Services.Win32
                 if (currentHook == IntPtr.Zero)
                 {
                     int errorCode = Marshal.GetLastWin32Error();
-                    logger.Error($"[{Guid.ToString()}] could not start keyboard hook");
+                    logger.Error($"{nameof(GlobalKeyboardHook)} [{Guid}] could not start keyboard hook");
                     throw new Win32Exception(errorCode, $"Could not start keyboard hook for '{Process.GetCurrentProcess().ProcessName}'. Error {errorCode}: {new Win32Exception(Marshal.GetLastWin32Error()).Message}.");
                 }
             }
@@ -390,12 +390,12 @@ namespace Services.Win32
                 if (!UnhookWindowsHookEx(currentHook))
                 {
                     int errorCode = Marshal.GetLastWin32Error();
-                    logger.Error($"[{guid.ToString()}] error on trying to dispose keyboard hook. ({errorCode})");
+                    logger.Error($"{nameof(GlobalKeyboardHook)} [{Guid}] error on trying to dispose keyboard hook. ({errorCode})");
                     throw new Win32Exception(errorCode, $"Error on trying to remove keyboard hook for '{Process.GetCurrentProcess().ProcessName}'. Error {errorCode}: {new Win32Exception(Marshal.GetLastWin32Error()).Message}.");
                 }
 
                 currentHook = IntPtr.Zero;
-                logger.Info(string.Format("[{0}] keyboard hook shut down", guid.ToString()));
+                logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] stopped.");
             }
         }
 
