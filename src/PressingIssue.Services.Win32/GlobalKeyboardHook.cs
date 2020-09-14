@@ -1,26 +1,11 @@
 ﻿/*
-THIS HOOK DOES NOT USE getkeystate!
-THIS MEANS ONLY KEYS PRESSED AFTER THE HOOK HAS STARTED ARE NOTICED!
-KEYS THAT MIGHT HAVE BEEND PRESSED AND HELD PRIOR TO STARTING THE HOOK MIGHT NOT BE CAUGHT!
+ useful links for comprehension:
 
-
-since we "just" give back
-    pressed key
-    and whether it was lifted or pressed
-we dont get the full key state (this mostly affects num pad keys for instance for which a different code is sent when numlock is switched)
-
-
-at first we only add hotkeys that trigger "on release" (in key up event, meaning we have to memorize and update currently pressed keys via key down)
-in a later stage one could also allow hotkeys to trigger "on key down" AND "on release" for instance: start capturing on keydown and stop capturing on same key up
-
- resources:
 http://www.dylansweb.com/2014/10/low-level-global-keyboard-hook-sink-in-c-net/
 https://stackoverflow.com/questions/604410/global-keyboard-capture-in-c-sharp-application/34384189#34384189
 
-
-
-        https://docs.microsoft.com/en-us/archive/blogs/toub/low-level-keyboard-hook-in-c
-        https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/october/cutting-edge-windows-hooks-in-the-net-framework
+https://docs.microsoft.com/en-us/archive/blogs/toub/low-level-keyboard-hook-in-c
+https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/october/cutting-edge-windows-hooks-in-the-net-framework
 
 https://www.pinvoke.net/default.aspx/Delegates/HookProc.html    
 http://pinvoke.net/default.aspx/Enums/HookType.html
