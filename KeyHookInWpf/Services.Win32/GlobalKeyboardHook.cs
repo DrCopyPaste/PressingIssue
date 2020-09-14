@@ -377,7 +377,7 @@ namespace Services.Win32
                 if (currentHook == IntPtr.Zero)
                 {
                     int errorCode = Marshal.GetLastWin32Error();
-                    logger.Error($"{nameof(GlobalKeyboardHook)} [{Guid}] could not start keyboard hook");
+                    logger.Error($"{nameof(GlobalKeyboardHook)} [{Guid}] could not start keyboard hook. ({errorCode})");
                     throw new Win32Exception(errorCode, $"Could not start keyboard hook for '{Process.GetCurrentProcess().ProcessName}'. Error {errorCode}: {new Win32Exception(Marshal.GetLastWin32Error()).Message}.");
                 }
             }
