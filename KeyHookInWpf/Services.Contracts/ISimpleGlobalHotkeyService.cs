@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Services.Contracts.Events;
+using System;
 
 namespace Services.Contracts
 {

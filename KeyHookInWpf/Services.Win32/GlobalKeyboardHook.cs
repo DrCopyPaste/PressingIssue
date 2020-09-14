@@ -351,7 +351,7 @@ namespace Services.Win32
 
         private IntPtr currentHook = IntPtr.Zero;
         private Guid guid = Guid.NewGuid();
-        private HookProc myCallbackDelegate = null;
+        private readonly HookProc myCallbackDelegate = null;
         private readonly NLog.Logger logger = null;
 
         public event EventHandler<GlobalKeyboardHookEventArgs> KeyEvent;

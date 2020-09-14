@@ -12,3 +12,7 @@
 /KeyHookInWpf/TestClient.SimpleGlobalHotkeyService/bin/Debug/netcoreapp3.1
 /KeyHookInWpf/TestClient.SimpleGlobalHotkeyService/obj
 /KeyHookInWpf/TestClient.SimpleGlobalHotkeyService/TestClient_SimpleGlobalHotkeyService.csproj.user
+/KeyHookInWpf/TestClient.SimpleGlobalHotkeyService/StyleCop.Cache
+/KeyHookInWpf/Services.Win32/StyleCop.Cache
+/KeyHookInWpf/Services.Contracts/StyleCop.Cache
+/KeyHookInWpf/KeyHookInWpf/StyleCop.Cache

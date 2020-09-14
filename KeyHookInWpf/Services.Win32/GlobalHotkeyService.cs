@@ -1,4 +1,5 @@
 ﻿using Services.Contracts;
+using Services.Contracts.Events;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,23 +11,18 @@ namespace Services.Win32
     public class GlobalHotkeyService : IGlobalHotkeyService, IDisposable
     {
         private readonly NLog.Logger logger = null;
-
-        public event EventHandler<GlobalHotkeyServiceEventArgs> KeyEvent;
-
-        public HashSet<string> ModifierKeys { get; private set; }
+        private readonly GlobalKeyboardHook keyboardHook = null;
+        private HashSet<string> modifierKeys = null;
 
         // key = hotkeysettingstring, value = currently held down
-        private Dictionary<string, bool> hotkeyPressedStates = null;
+        private readonly Dictionary<string, bool> hotkeyPressedStates = null;
+        private readonly Dictionary<string, Action> quickCastHotkeys = null;
+        private readonly Dictionary<string, Action> onReleaseHotkeys = null;
 
-        private Dictionary<string, Action> quickCastHotkeys = null;
-        private Dictionary<string, Action> onReleaseHotkeys = null;
+        private readonly List<string> pressedKeys = null;
+        private readonly HashSet<string> pressedNonModifierKeys = null;
 
-        // repeatable hotkeys? maybe in the future (additional parameter: repeat interval)
-
-        private GlobalKeyboardHook keyboardHook = null;
-        private List<string> pressedKeys = null;
-        private HashSet<string> pressedNonModifierKeys = null;
-
+        public event EventHandler<GlobalHotkeyServiceEventArgs> KeyEvent;
         public bool Running { get; private set; } = false;
         public bool ProcessingHotkeys { get; set; } = true;
 
@@ -34,7 +30,7 @@ namespace Services.Win32
         {
             logger = NLog.LogManager.GetCurrentClassLogger();
 
-            ModifierKeys = new HashSet<string>()
+            modifierKeys = new HashSet<string>()
             {
                 Keys.Control.ToString(),
                 Keys.LControlKey.ToString(),
@@ -57,16 +53,6 @@ namespace Services.Win32
             pressedNonModifierKeys = new HashSet<string>();
 
             Start();
-        }
-
-        private string GetPressedKeysAsSetting(List<string> pressedKeys)
-        {
-            return string.Join('-', pressedKeys.OrderBy(k => k).ToList());
-        }
-
-        public void Dispose()
-        {
-            Stop();
         }
 
         private void ProcessKeys_Event(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
@@ -110,14 +96,6 @@ namespace Services.Win32
             }
         }
 
-        private void ResetHotkeyPressedStates()
-        {
-            foreach (var keyName in hotkeyPressedStates.Keys.ToList())
-            {
-                hotkeyPressedStates[keyName] = false;
-            }
-        }
-
         private void HandleCustomEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
         {
             try
@@ -131,28 +109,29 @@ namespace Services.Win32
             }
         }
 
-        private void ProcessHotkeysKeyUp()
+        private void AddOrUpdateHotkeyState(string settingString)
         {
-            if (onReleaseHotkeys.Any())
+            if (this.hotkeyPressedStates.ContainsKey(settingString))
             {
-                // only one action per hotkey allowed atm (dictionary), but that may change
-                var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
-
-                if (hotkeysWaitingForRelease.Any())
-                {
-                    foreach (var hotkeyAction in hotkeysWaitingForRelease)
-                    {
-                        try
-                        {
-                            hotkeyAction.Value.Invoke();
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Error(ex, $"An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
-                        }
-                    }
-                }
+                this.hotkeyPressedStates[settingString] = false;
             }
+            else
+            {
+                this.hotkeyPressedStates.Add(settingString, false);
+            }
+        }
+
+        private void ResetHotkeyPressedStates()
+        {
+            foreach (var keyName in hotkeyPressedStates.Keys.ToList())
+            {
+                hotkeyPressedStates[keyName] = false;
+            }
+        }
+
+        private string GetPressedKeysAsSetting(List<string> pressedKeys)
+        {
+            return string.Join('-', pressedKeys.OrderBy(k => k).ToList());
         }
 
         private void ProcessHotkeysKeyDown(string pressedKeysAsConfig)
@@ -180,6 +159,30 @@ namespace Services.Win32
             }
         }
 
+        private void ProcessHotkeysKeyUp()
+        {
+            if (onReleaseHotkeys.Any())
+            {
+                // only one action per hotkey allowed atm (dictionary), but that may change
+                var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
+
+                if (hotkeysWaitingForRelease.Any())
+                {
+                    foreach (var hotkeyAction in hotkeysWaitingForRelease)
+                    {
+                        try
+                        {
+                            hotkeyAction.Value.Invoke();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, $"An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
+                        }
+                    }
+                }
+            }
+        }
+
         private void UpdateNewlyPressedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
             if (!pressedKeys.Contains(e.KeyName))
@@ -187,7 +190,7 @@ namespace Services.Win32
                 pressedKeys.Add(e.KeyName);
             }
 
-            if (!pressedNonModifierKeys.Contains(e.KeyName) && !ModifierKeys.Contains(e.KeyName))
+            if (!pressedNonModifierKeys.Contains(e.KeyName) && !modifierKeys.Contains(e.KeyName))
             {
                 pressedNonModifierKeys.Add(e.KeyName);
             }
@@ -249,16 +252,9 @@ namespace Services.Win32
             }
         }
 
-        private void AddOrUpdateHotkeyState(string settingString)
+        public void Dispose()
         {
-            if (this.hotkeyPressedStates.ContainsKey(settingString))
-            {
-                this.hotkeyPressedStates[settingString] = false;
-            }
-            else
-            {
-                this.hotkeyPressedStates.Add(settingString, false);
-            }
+            Stop();
         }
     }
 

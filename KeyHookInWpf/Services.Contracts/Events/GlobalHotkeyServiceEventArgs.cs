@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Services.Contracts
+namespace Services.Contracts.Events
 {
     public class GlobalHotkeyServiceEventArgs
     {

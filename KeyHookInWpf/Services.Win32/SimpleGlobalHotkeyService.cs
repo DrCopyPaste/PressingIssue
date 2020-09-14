@@ -1,4 +1,5 @@
 ﻿using Services.Contracts;
+using Services.Contracts.Events;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -219,21 +220,16 @@ namespace Services.Win32
         #endregion
 
         private readonly NLog.Logger logger = null;
-
-        public event EventHandler<SimpleGlobalHotkeyServiceEventArgs> KeyEvent;
-
-        public HashSet<string> ModifierKeys { get; private set; }
+        private readonly GlobalKeyboardHook keyboardHook = null;
+        private readonly HashSet<string> modifierKeys = null;
 
         // key = hotkeysettingstring, value = currently held down
-        private Dictionary<string, bool> hotkeyPressedStates = null;
+        private readonly Dictionary<string, bool> hotkeyPressedStates = null;
+        private readonly Dictionary<string, Action> quickCastHotkeys = null;
+        private readonly Dictionary<string, Action> onReleaseHotkeys = null;
 
-        private Dictionary<string, Action> quickCastHotkeys = null;
-        private Dictionary<string, Action> onReleaseHotkeys = null;
 
-        // repeatable hotkeys? maybe in the future (additional parameter: repeat interval)
-
-        private GlobalKeyboardHook keyboardHook = null;
-
+        public event EventHandler<SimpleGlobalHotkeyServiceEventArgs> KeyEvent;
         public bool Running { get; private set; } = false;
         public bool ProcessingHotkeys { get; set; } = true;
 
@@ -241,7 +237,7 @@ namespace Services.Win32
         {
             logger = NLog.LogManager.GetCurrentClassLogger();
 
-            ModifierKeys = new HashSet<string>()
+            modifierKeys = new HashSet<string>()
             {
                 Keys.Control.ToString(),
                 Keys.LControlKey.ToString(),
@@ -262,35 +258,6 @@ namespace Services.Win32
             onReleaseHotkeys = new Dictionary<string, Action>();
 
             Start();
-        }
-
-        private string GetPressedKeysAsSetting(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
-        {
-            if (e.KeyUp)
-            {
-                // cannot really determine here which keys were lifted
-                return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { "None", false, false, false, false });
-            }
-
-            string pressedKey = ModifierKeys.Contains(e.KeyName) ? "None" : e.KeyName;
-
-            bool isWinPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LWIN) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RWIN) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LWin.ToString() || e.KeyName == Keys.RWin.ToString()));
-            bool isAltPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LMENU) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RMENU) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LMenu.ToString() || e.KeyName == Keys.RMenu.ToString()));
-            bool isCtrlPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LCONTROL) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RCONTROL) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LControlKey.ToString() || e.KeyName == Keys.RControlKey.ToString()));
-            bool isShiftPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LSHIFT) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RSHIFT) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LShiftKey.ToString() || e.KeyName == Keys.RShiftKey.ToString()));
-
-            //bool isWinPressed = Convert.ToBoolean(GetKeyState(VirtualKeyStates.VK_LWIN) & KEY_PRESSED) || Convert.ToBoolean(GetKeyState(VirtualKeyStates.VK_RWIN) & KEY_PRESSED) || e.KeyName == Keys.LWin.ToString() || e.KeyName == Keys.RWin.ToString();
-            //bool isAltPressed = Convert.ToBoolean(GetKeyState(VirtualKeyStates.VK_LMENU) & KEY_PRESSED) || Convert.ToBoolean(GetKeyState(VirtualKeyStates.VK_RMENU) & KEY_PRESSED) || e.KeyName == Keys.LMenu.ToString() || e.KeyName == Keys.RMenu.ToString();
-            //bool isCtrlPressed = Convert.ToBoolean(GetKeyState(VirtualKeyStates.VK_LCONTROL) & KEY_PRESSED) || Convert.ToBoolean(GetKeyState(VirtualKeyStates.VK_RCONTROL) & KEY_PRESSED) || e.KeyName == Keys.LControlKey.ToString() || e.KeyName == Keys.RControlKey.ToString();
-            //bool isShiftPressed = Convert.ToBoolean(GetKeyState(VirtualKeyStates.VK_LSHIFT) & KEY_PRESSED) || Convert.ToBoolean(GetKeyState(VirtualKeyStates.VK_RSHIFT) & KEY_PRESSED) || e.KeyName == Keys.LShiftKey.ToString() || e.KeyName == Keys.RShiftKey.ToString();
-
-            // this settings format is to be compatible with previously used fmutils keyboard hook
-            return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { pressedKey, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed });
-        }
-
-        public void Dispose()
-        {
-            Stop();
         }
 
         private void ProcessKeys_Event(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
@@ -328,14 +295,6 @@ namespace Services.Win32
             }
         }
 
-        private void ResetHotkeyPressedStates()
-        {
-            foreach (var keyName in hotkeyPressedStates.Keys.ToList())
-            {
-                hotkeyPressedStates[keyName] = false;
-            }
-        }
-
         private void HandleCustomEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
         {
             try
@@ -349,27 +308,42 @@ namespace Services.Win32
             }
         }
 
-        private void ProcessHotkeysKeyUp()
+        private string GetPressedKeysAsSetting(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            if (onReleaseHotkeys.Any())
+            if (e.KeyUp)
             {
-                // only one action per hotkey allowed atm (dictionary), but that may change
-                var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
+                // cannot really determine here which keys were lifted
+                return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { "None", false, false, false, false });
+            }
 
-                if (hotkeysWaitingForRelease.Any())
-                {
-                    foreach (var hotkeyAction in hotkeysWaitingForRelease)
-                    {
-                        try
-                        {
-                            hotkeyAction.Value.Invoke();
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Error(ex, $"An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
-                        }
-                    }
-                }
+            string pressedKey = modifierKeys.Contains(e.KeyName) ? "None" : e.KeyName;
+
+            bool isWinPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LWIN) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RWIN) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LWin.ToString() || e.KeyName == Keys.RWin.ToString()));
+            bool isAltPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LMENU) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RMENU) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LMenu.ToString() || e.KeyName == Keys.RMenu.ToString()));
+            bool isCtrlPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LCONTROL) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RCONTROL) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LControlKey.ToString() || e.KeyName == Keys.RControlKey.ToString()));
+            bool isShiftPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LSHIFT) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RSHIFT) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LShiftKey.ToString() || e.KeyName == Keys.RShiftKey.ToString()));
+
+            // this settings format is to be compatible with previously used fmutils keyboard hook
+            return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { pressedKey, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed });
+        }
+
+        private void AddOrUpdateHotkeyState(string settingString)
+        {
+            if (this.hotkeyPressedStates.ContainsKey(settingString))
+            {
+                this.hotkeyPressedStates[settingString] = false;
+            }
+            else
+            {
+                this.hotkeyPressedStates.Add(settingString, false);
+            }
+        }
+
+        private void ResetHotkeyPressedStates()
+        {
+            foreach (var keyName in hotkeyPressedStates.Keys.ToList())
+            {
+                hotkeyPressedStates[keyName] = false;
             }
         }
 
@@ -395,6 +369,30 @@ namespace Services.Win32
             else
             {
                 ResetHotkeyPressedStates();
+            }
+        }
+
+        private void ProcessHotkeysKeyUp()
+        {
+            if (onReleaseHotkeys.Any())
+            {
+                // only one action per hotkey allowed atm (dictionary), but that may change
+                var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
+
+                if (hotkeysWaitingForRelease.Any())
+                {
+                    foreach (var hotkeyAction in hotkeysWaitingForRelease)
+                    {
+                        try
+                        {
+                            hotkeyAction.Value.Invoke();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, $"An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
+                        }
+                    }
+                }
             }
         }
 
@@ -441,16 +439,9 @@ namespace Services.Win32
             }
         }
 
-        private void AddOrUpdateHotkeyState(string settingString)
+        public void Dispose()
         {
-            if (this.hotkeyPressedStates.ContainsKey(settingString))
-            {
-                this.hotkeyPressedStates[settingString] = false;
-            }
-            else
-            {
-                this.hotkeyPressedStates.Add(settingString, false);
-            }
+            Stop();
         }
     }
 

@@ -1,5 +1,6 @@
 ﻿using NLog;
 using Services.Contracts;
+using Services.Contracts.Events;
 using Services.Win32;
 using System;
 using System.ComponentModel;
@@ -13,9 +14,9 @@ namespace TestClient_SimpleGlobalHotkeyService
     /// </summary>
     public partial class MainWindow : Window
     {
-        public Logger logger { get; private set; }
+        public Logger logger = null;
 
-        private SimpleGlobalHotkeyService hotkeyService;
+        private readonly SimpleGlobalHotkeyService hotkeyService;
         //private GlobalHotkeyService hotkeyService2;
 
         public MainWindow()
