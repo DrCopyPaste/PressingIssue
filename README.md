@@ -29,7 +29,7 @@ To get the setting string of a hotkey (for instance to update your hotkey config
 
 # MultiKeyGlobalHotkeyService
 
-MultiKeyGlobalHotkeyService enables you to add as many non-modifier keys as you like to your hotkeys (limited by your keyboard hardware of course).
+MultiKeyGlobalHotkeyService distinguishes between modifiers on the left and on the right and enables you to add as many non-modifier keys as you like to your hotkeys (limited by your keyboard hardware of course).
 
 This is achieved by some internal "accounting" of pressed keys using dictionaries, which of course has "some" performance penalties. (see logging for details)
 
@@ -41,12 +41,12 @@ hotkeyService.ProcessingHotkeys = false; // toggle reacting to hotkeys if needed
 
 // add hotkeys that should trigger when released like this
 hotkeyService.AddOrUpdateOnReleaseHotkey(
-  "Key=Pause; Win=False; Alt=False; Ctrl=False; Shift=False",
+  "Pause",
   () => System.Console.WriteLine("you triggered [Pause] on release"));
 
 // add hotkeys that should trigger on key down like this
 hotkeyService.AddOrUpdateQuickCastHotkey(
-  "Key=F12; Win=False; Alt=False; Ctrl=False; Shift=False",
+  "F12",
   () => System.Console.WriteLine("you triggered [F12] with quickcast (on key down)"));
 ```
 
@@ -62,11 +62,11 @@ hotkeyService.ProcessingHotkeys = false; // toggle reacting to hotkeys if needed
 
 // add hotkeys that should trigger when released like this
 hotkeyService.AddOrUpdateOnReleaseHotkey(
-  "Pause",
+  "Key=Pause; Win=False; Alt=False; Ctrl=False; Shift=False",
   () => System.Console.WriteLine("you triggered [Pause] on release"));
 
 // add hotkeys that should trigger on key down like this
 hotkeyService.AddOrUpdateQuickCastHotkey(
-  "F12",
+  "Key=F12; Win=False; Alt=False; Ctrl=False; Shift=False",
   () => System.Console.WriteLine("you triggered [F12] with quickcast (on key down)"));
 ```
