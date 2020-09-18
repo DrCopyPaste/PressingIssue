@@ -359,18 +359,16 @@ namespace PressingIssue.Services.Win32
             Guid = Guid.NewGuid();
             logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] started.");
 
-            using (Process process = Process.GetCurrentProcess())
-            using (ProcessModule module = process.MainModule)
-            {
-                IntPtr hModule = GetModuleHandle(module.ModuleName);
-                currentHook = SetWindowsHookEx(HookType.WH_KEYBOARD_LL, this.myCallbackDelegate, hModule, 0);
+            using Process process = Process.GetCurrentProcess();
+            using ProcessModule module = process.MainModule;
+            IntPtr hModule = GetModuleHandle(module.ModuleName);
+            currentHook = SetWindowsHookEx(HookType.WH_KEYBOARD_LL, this.myCallbackDelegate, hModule, 0);
 
-                if (currentHook == IntPtr.Zero)
-                {
-                    int errorCode = Marshal.GetLastWin32Error();
-                    logger.Error($"{nameof(GlobalKeyboardHook)} [{Guid}] could not start keyboard hook. ({errorCode})");
-                    throw new Win32Exception(errorCode, $"Could not start keyboard hook for '{Process.GetCurrentProcess().ProcessName}'. Error {errorCode}: {new Win32Exception(Marshal.GetLastWin32Error()).Message}.");
-                }
+            if (currentHook == IntPtr.Zero)
+            {
+                int errorCode = Marshal.GetLastWin32Error();
+                logger.Error($"{nameof(GlobalKeyboardHook)} [{Guid}] could not start keyboard hook. ({errorCode})");
+                throw new Win32Exception(errorCode, $"Could not start keyboard hook for '{Process.GetCurrentProcess().ProcessName}'. Error {errorCode}: {new Win32Exception(Marshal.GetLastWin32Error()).Message}.");
             }
         }
 

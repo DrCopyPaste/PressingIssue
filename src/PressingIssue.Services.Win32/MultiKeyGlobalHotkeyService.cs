@@ -12,7 +12,7 @@ namespace PressingIssue.Services.Win32
     {
         private readonly NLog.Logger logger = null;
         private readonly GlobalKeyboardHook keyboardHook = null;
-        private HashSet<string> modifierKeys = null;
+        private readonly HashSet<string> modifierKeys = null;
 
         // key = hotkeysettingstring, value = currently held down
         private readonly Dictionary<string, bool> hotkeyPressedStates = null;

@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Text;
 using System.Windows;
-using NLog;
 using PressingIssue.Services.Contracts.Events;
 using PressingIssue.Services.Win32;
 
@@ -13,14 +12,12 @@ namespace KeyHookInWpf
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly Logger logger = null;
         private readonly MultiKeyGlobalHotkeyService hotkeyService;
         //private GlobalHotkeyService hotkeyService2;
 
         public MainWindow()
         {
             InitializeComponent();
-            logger = NLog.LogManager.GetCurrentClassLogger();
             hotkeyService = new MultiKeyGlobalHotkeyService();
             hotkeyService.KeyEvent += HotkeyServiceKeyEvent;
 

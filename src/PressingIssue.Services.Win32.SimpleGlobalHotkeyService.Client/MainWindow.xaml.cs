@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Text;
 using System.Windows;
-using NLog;
 using PressingIssue.Services.Contracts.Events;
 using PressingIssue.Services.Win32;
 
@@ -13,15 +12,12 @@ namespace TestClient_SimpleGlobalHotkeyService
     /// </summary>
     public partial class MainWindow : Window
     {
-        public Logger logger = null;
-
         private readonly SimpleGlobalHotkeyService hotkeyService;
         //private GlobalHotkeyService hotkeyService2;
 
         public MainWindow()
         {
             InitializeComponent();
-            logger = NLog.LogManager.GetCurrentClassLogger();
             hotkeyService = new SimpleGlobalHotkeyService();
             hotkeyService.KeyEvent += HotkeyServiceKeyEvent;
 
