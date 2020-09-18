@@ -6,3 +6,4 @@
 **/bin
 /.vs/PressingIssue
 **/*.csproj.user
+.vs
