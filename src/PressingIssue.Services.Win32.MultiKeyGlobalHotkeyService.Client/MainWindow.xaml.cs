@@ -34,8 +34,6 @@ namespace KeyHookInWpf
                 "Pause",
                 () =>
                 {
-                    logger.Info("this was on release!");
-
                     var stringBuilder = new StringBuilder(Eventlines.Text);
                     stringBuilder.Insert(0, $"{DateTime.Now:yyyy-MM-dd hh:mm:ss.fff} [Pause] hotkey triggered on release\n");
 
@@ -46,8 +44,6 @@ namespace KeyHookInWpf
                 "F12",
                 () =>
                 {
-                    logger.Info("this was with quickcast!");
-
                     var stringBuilder = new StringBuilder(Eventlines.Text);
                     stringBuilder.Insert(0, $"{DateTime.Now:yyyy-MM-dd hh:mm:ss.fff} [F12] hotkey triggered on quickcast (key down - no repeat) \n");
 
@@ -76,14 +72,7 @@ namespace KeyHookInWpf
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            var previousMode = hotkeyService.ProcessingHotkeys;
-
-            if (hotkeyService.Running)
-            {
-                hotkeyService.Stop();
-            }
-
-            hotkeyService.Start(!previousMode);
+            hotkeyService.ProcessingHotkeys = !hotkeyService.ProcessingHotkeys;
             SetModeText();
         }
     }

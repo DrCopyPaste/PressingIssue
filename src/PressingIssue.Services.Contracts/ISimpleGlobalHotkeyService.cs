@@ -3,7 +3,7 @@ using System;
 
 namespace Services.Contracts
 {
-    public interface ISimpleGlobalHotkeyService
+    public interface ISimpleGlobalHotkeyService : IDisposable
     {
         bool ProcessingHotkeys { get; set; }
         bool Running { get; }

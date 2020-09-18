@@ -301,8 +301,10 @@ namespace Services.Win32
 
         private IntPtr HookCallbackFunction(int code, IntPtr wParam, IntPtr lParam)
         {
+#if DEBUG
             var stopwatch = new Stopwatch();
             stopwatch.Start();
+#endif
 
             if (code >= 0)
             {
@@ -314,7 +316,10 @@ namespace Services.Win32
                     try
                     {
                         KeyEvent?.Invoke(this, new GlobalKeyboardHookEventArgs(wParam, lParam));
+
+#if DEBUG
                         logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] invoking keyevent took: {stopwatch.ElapsedMilliseconds} ms");
+#endif
                     }
                     catch (Exception ex)
                     {
@@ -324,8 +329,10 @@ namespace Services.Win32
                 }
             }
 
+#if DEBUG
             stopwatch.Stop();
             logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] processing HookCallbackFunction took: {stopwatch.ElapsedMilliseconds} ms");
+#endif
 
             //you need to call CallNextHookEx without further processing
             //and return the value returned by CallNextHookEx
