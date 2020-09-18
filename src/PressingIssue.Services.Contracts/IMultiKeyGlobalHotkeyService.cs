@@ -1,22 +1,12 @@
-﻿using Services.Contracts.Events;
-using System;
+﻿using System;
+using PressingIssue.Services.Contracts.Events;
 
-namespace Services.Contracts
+namespace PressingIssue.Services.Contracts
 {
-    public interface IMultiKeyGlobalHotkeyService : IDisposable
+    public interface IMultiKeyGlobalHotkeyService : IBasicGlobalHotkeyService
     {
-        bool ProcessingHotkeys { get; set; }
-        bool Running { get; }
-
         // you can attach to this to do additional actions on key down/up
         // but it is not needed for processing hotkeys
         event EventHandler<MultiKeyGlobalHotkeyServiceEventArgs> KeyEvent;
-
-        void Start(bool processingHotkeys = true);
-        void Stop();
-
-        void AddOrUpdateQuickCastHotkey(string settingString, Action hotkeyAction);
-        
-        void AddOrUpdateOnReleaseHotkey(string settingString, Action hotkeyAction);
     }
 }

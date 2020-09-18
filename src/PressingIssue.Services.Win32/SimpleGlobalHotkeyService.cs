@@ -1,13 +1,13 @@
-﻿using Services.Contracts;
-using Services.Contracts.Events;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using PressingIssue.Services.Contracts;
+using PressingIssue.Services.Contracts.Events;
 
-namespace Services.Win32
+namespace PressingIssue.Services.Win32
 {
     public class SimpleGlobalHotkeyService : ISimpleGlobalHotkeyService
     {
@@ -466,6 +466,13 @@ namespace Services.Win32
             {
                 this.onReleaseHotkeys.Add(settingString, hotkeyAction);
             }
+        }
+
+        public void RemoveAllHotkeys()
+        {
+            this.quickCastHotkeys.Clear();
+            this.onReleaseHotkeys.Clear();
+            this.hotkeyPressedStates.Clear();
         }
 
         public void Dispose()

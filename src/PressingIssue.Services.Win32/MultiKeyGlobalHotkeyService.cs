@@ -1,12 +1,12 @@
-﻿using Services.Contracts;
-using Services.Contracts.Events;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
+using PressingIssue.Services.Contracts;
+using PressingIssue.Services.Contracts.Events;
 
-namespace Services.Win32
+namespace PressingIssue.Services.Win32
 {
     public class MultiKeyGlobalHotkeyService : IMultiKeyGlobalHotkeyService
     {
@@ -117,7 +117,7 @@ namespace Services.Win32
                 logger.Error(ex, $"{nameof(MultiKeyGlobalHotkeyService)} An error occurred trying to trigger the custom hotkeyservice event.");
             }
 #if DEBUG
-                logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} invoked KeyEvent  and took: {stopwatch.ElapsedMilliseconds} ms");
+            logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} invoked KeyEvent  and took: {stopwatch.ElapsedMilliseconds} ms");
 #endif
         }
 
@@ -279,6 +279,13 @@ namespace Services.Win32
             {
                 this.onReleaseHotkeys.Add(settingString, hotkeyAction);
             }
+        }
+
+        public void RemoveAllHotkeys()
+        {
+            this.quickCastHotkeys.Clear();
+            this.onReleaseHotkeys.Clear();
+            this.hotkeyPressedStates.Clear();
         }
 
         public void Dispose()

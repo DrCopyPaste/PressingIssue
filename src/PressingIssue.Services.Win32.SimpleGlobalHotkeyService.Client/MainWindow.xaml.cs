@@ -1,11 +1,10 @@
-﻿using NLog;
-using Services.Contracts;
-using Services.Contracts.Events;
-using Services.Win32;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Text;
 using System.Windows;
+using NLog;
+using PressingIssue.Services.Contracts.Events;
+using PressingIssue.Services.Win32;
 
 namespace TestClient_SimpleGlobalHotkeyService
 {
@@ -24,7 +23,7 @@ namespace TestClient_SimpleGlobalHotkeyService
             InitializeComponent();
             logger = NLog.LogManager.GetCurrentClassLogger();
             hotkeyService = new SimpleGlobalHotkeyService();
-            hotkeyService.KeyEvent += Mahook_CustomEvent;
+            hotkeyService.KeyEvent += HotkeyServiceKeyEvent;
 
             SetModeText();
 
@@ -53,7 +52,7 @@ namespace TestClient_SimpleGlobalHotkeyService
             this.Closing += MainWindow_Closing;
         }
 
-        private void Mahook_CustomEvent(object sender, SimpleGlobalHotkeyServiceEventArgs e)
+        private void HotkeyServiceKeyEvent(object sender, SimpleGlobalHotkeyServiceEventArgs e)
         {
             this.ShownKeys.Content = e.AsSettingString;
         }

@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
-namespace Services.Contracts.Events
+namespace PressingIssue.Services.Contracts.Events
 {
     public class MultiKeyGlobalHotkeyServiceEventArgs
     {

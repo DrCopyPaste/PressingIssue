@@ -22,13 +22,12 @@ http://pinvoke.net/default.aspx/Constants.WM
 
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace Services.Win32
+namespace PressingIssue.Services.Win32
 {
     public class GlobalKeyboardHook
     {

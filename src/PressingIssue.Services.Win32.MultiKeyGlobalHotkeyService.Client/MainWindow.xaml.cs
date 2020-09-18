@@ -1,11 +1,10 @@
-﻿using NLog;
-using Services.Contracts;
-using Services.Contracts.Events;
-using Services.Win32;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Text;
 using System.Windows;
+using NLog;
+using PressingIssue.Services.Contracts.Events;
+using PressingIssue.Services.Win32;
 
 namespace KeyHookInWpf
 {
@@ -15,7 +14,6 @@ namespace KeyHookInWpf
     public partial class MainWindow : Window
     {
         private readonly Logger logger = null;
-
         private readonly MultiKeyGlobalHotkeyService hotkeyService;
         //private GlobalHotkeyService hotkeyService2;
 
@@ -24,7 +22,7 @@ namespace KeyHookInWpf
             InitializeComponent();
             logger = NLog.LogManager.GetCurrentClassLogger();
             hotkeyService = new MultiKeyGlobalHotkeyService();
-            hotkeyService.KeyEvent += Mahook_CustomEvent;
+            hotkeyService.KeyEvent += HotkeyServiceKeyEvent;
 
             SetModeText();
 
@@ -53,7 +51,7 @@ namespace KeyHookInWpf
             this.Closing += MainWindow_Closing;
         }
 
-        private void Mahook_CustomEvent(object sender, MultiKeyGlobalHotkeyServiceEventArgs e)
+        private void HotkeyServiceKeyEvent(object sender, MultiKeyGlobalHotkeyServiceEventArgs e)
         {
             this.ShownKeys.Content = e.AsSettingString;
         }
