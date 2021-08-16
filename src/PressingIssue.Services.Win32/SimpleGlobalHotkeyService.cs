@@ -266,16 +266,21 @@ namespace PressingIssue.Services.Win32
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 #endif
+            bool isWinPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LWIN) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RWIN) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LWin.ToString() || e.KeyName == Keys.RWin.ToString()));
+            bool isAltPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LMENU) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RMENU) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LMenu.ToString() || e.KeyName == Keys.RMenu.ToString()));
+            bool isCtrlPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LCONTROL) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RCONTROL) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LControlKey.ToString() || e.KeyName == Keys.RControlKey.ToString()));
+            bool isShiftPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LSHIFT) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RSHIFT) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LShiftKey.ToString() || e.KeyName == Keys.RShiftKey.ToString()));
+            bool keyIsModifier = modifierKeys.Contains(e.KeyName);
+            var pressedKeysAsConfig = GetPressedKeysAsSetting(e, keyIsModifier, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+
             if (e.KeyDown)
             {
-                var pressedKeysAsConfig = GetPressedKeysAsSetting(e);
-
                 if (ProcessingHotkeys)
                 {
                     ProcessHotkeysDown(pressedKeysAsConfig);
                 }
 
-                KeyChangedEvent(e, pressedKeysAsConfig);
+                KeyChangedEvent(e, keyIsModifier, pressedKeysAsConfig, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
 
 #if DEBUG
                 logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyDown event with setting string ({pressedKeysAsConfig}) and took: {stopwatch.ElapsedMilliseconds} ms");
@@ -290,9 +295,8 @@ namespace PressingIssue.Services.Win32
 
                 // ensure hotkeys are not pressed even if not in ProcessingHotkeys mode
                 ResetHotkeyPressedStates();
-                var pressedKeysAsConfig = GetPressedKeysAsSetting(e);
 
-                KeyChangedEvent(e, pressedKeysAsConfig);
+                KeyChangedEvent(e, keyIsModifier, pressedKeysAsConfig, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
 
 #if DEBUG
                 logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyUp event with setting string ({pressedKeysAsConfig}) and took: {stopwatch.ElapsedMilliseconds} ms");
@@ -300,7 +304,7 @@ namespace PressingIssue.Services.Win32
             }
         }
 
-        private void KeyChangedEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
+        private void KeyChangedEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool keyIsModifier, string pressedKeysAsConfig, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
         {
 #if DEBUG
             var stopwatch = new Stopwatch();
@@ -308,7 +312,7 @@ namespace PressingIssue.Services.Win32
 #endif
             try
             {
-                KeyEvent?.Invoke(this, new SimpleGlobalHotkeyServiceEventArgs(e.KeyDown, e.KeyName, pressedKeysAsConfig));
+                KeyEvent?.Invoke(this, new SimpleGlobalHotkeyServiceEventArgs(e.KeyDown, e.KeyName, keyIsModifier, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed, pressedKeysAsConfig));
             }
             catch (Exception ex)
             {
@@ -320,20 +324,15 @@ namespace PressingIssue.Services.Win32
 #endif
         }
 
-        private string GetPressedKeysAsSetting(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
+        private string GetPressedKeysAsSetting(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool keyIsModifier, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
         {
             if (e.KeyUp)
             {
-                // cannot really determine here which keys were lifted
-                return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { "None", false, false, false, false });
+                // cannot really determine here which keys were lifted (but we should know which modifier is being pressed
+                return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { "None", isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed });
             }
 
-            string pressedKey = modifierKeys.Contains(e.KeyName) ? "None" : e.KeyName;
-
-            bool isWinPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LWIN) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RWIN) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LWin.ToString() || e.KeyName == Keys.RWin.ToString()));
-            bool isAltPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LMENU) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RMENU) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LMenu.ToString() || e.KeyName == Keys.RMenu.ToString()));
-            bool isCtrlPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LCONTROL) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RCONTROL) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LControlKey.ToString() || e.KeyName == Keys.RControlKey.ToString()));
-            bool isShiftPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LSHIFT) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RSHIFT) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LShiftKey.ToString() || e.KeyName == Keys.RShiftKey.ToString()));
+            string pressedKey = keyIsModifier ? "None" : e.KeyName;
 
             // this settings format is to be compatible with previously used fmutils keyboard hook
             return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { pressedKey, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed });

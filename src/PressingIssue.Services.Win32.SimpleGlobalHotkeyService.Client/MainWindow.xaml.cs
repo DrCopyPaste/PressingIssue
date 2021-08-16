@@ -50,7 +50,9 @@ namespace TestClient_SimpleGlobalHotkeyService
 
         private void HotkeyServiceKeyEvent(object sender, SimpleGlobalHotkeyServiceEventArgs e)
         {
-            this.ShownKeys.Content = e.AsSettingString;
+            string result = $" {(e.KeyDown ? "Down" : "Up")} Alt:{e.IsAltPressed} - Ctrl:{e.IsCtrlPressed} - Shift:{e.IsShiftPressed} - Win:{e.IsWinPressed} - KeyIsModifier:{e.KeyIsModifier} - Key:{e.Key}";
+
+            this.ShownKeys.Content = result;// e.AsSettingString;
         }
 
         void MainWindow_Closing(object sender, CancelEventArgs e)
