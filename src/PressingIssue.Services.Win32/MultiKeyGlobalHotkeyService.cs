@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Windows.Forms;
 using PressingIssue.Services.Contracts;
 using PressingIssue.Services.Contracts.Events;
 
@@ -214,28 +213,28 @@ namespace PressingIssue.Services.Win32
 
         private void UpdateNewlyPressedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            if (!pressedKeys.Contains(e.KeyName))
-            {
-                pressedKeys.Add(e.KeyName);
-            }
+            //if (!pressedKeys.Contains(e.KeyName))
+            //{
+            //    pressedKeys.Add(e.KeyName);
+            //}
 
-            if (!pressedNonModifierKeys.Contains(e.KeyName) && !modifierKeys.Contains(e.KeyName))
-            {
-                pressedNonModifierKeys.Add(e.KeyName);
-            }
+            //if (!pressedNonModifierKeys.Contains(e.KeyName) && !modifierKeys.Contains(e.KeyName))
+            //{
+            //    pressedNonModifierKeys.Add(e.KeyName);
+            //}
         }
 
         private void UpdateLiftedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            if (pressedKeys.Contains(e.KeyName))
-            {
-                pressedKeys.Remove(e.KeyName);
-            }
+            //if (pressedKeys.Contains(e.KeyName))
+            //{
+            //    pressedKeys.Remove(e.KeyName);
+            //}
 
-            if (pressedNonModifierKeys.Contains(e.KeyName))
-            {
-                pressedNonModifierKeys.Remove(e.KeyName);
-            }
+            //if (pressedNonModifierKeys.Contains(e.KeyName))
+            //{
+            //    pressedNonModifierKeys.Remove(e.KeyName);
+            //}
         }
 
         public void Start(bool processHotkeys = true)

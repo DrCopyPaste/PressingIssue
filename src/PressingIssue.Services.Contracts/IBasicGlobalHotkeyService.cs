@@ -11,9 +11,5 @@ namespace PressingIssue.Services.Contracts
         void Stop();
 
         void RemoveAllHotkeys();
-
-        void AddOrUpdateQuickCastHotkey(string settingString, Action hotkeyAction);
-        
-        void AddOrUpdateOnReleaseHotkey(string settingString, Action hotkeyAction);
     }
 }

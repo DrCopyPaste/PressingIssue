@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using PressingIssue.Services.Contracts;
 using PressingIssue.Services.Contracts.Events;
 
@@ -221,12 +220,17 @@ namespace PressingIssue.Services.Win32
 
         private readonly NLog.Logger logger = null;
         private readonly GlobalKeyboardHook keyboardHook = null;
-        private readonly HashSet<string> modifierKeys = null;
 
         // key = hotkeysettingstring, value = currently held down
+        /*
         private readonly Dictionary<string, bool> hotkeyPressedStates = null;
         private readonly Dictionary<string, Action> quickCastHotkeys = null;
         private readonly Dictionary<string, Action> onReleaseHotkeys = null;
+         */
+
+        private readonly Dictionary<Tuple<Keys, bool, bool, bool, bool>, bool> hotkeyPressedStates = null;
+        private readonly Dictionary<Tuple<Keys, bool, bool, bool, bool>, Action> quickCastHotkeys = null;
+        private readonly Dictionary<Tuple<Keys, bool, bool, bool, bool>, Action> onReleaseHotkeys = null;
 
 
         public event EventHandler<SimpleGlobalHotkeyServiceEventArgs> KeyEvent;
@@ -237,25 +241,11 @@ namespace PressingIssue.Services.Win32
         {
             logger = NLog.LogManager.GetCurrentClassLogger();
 
-            modifierKeys = new HashSet<string>()
-            {
-                Keys.Control.ToString(),
-                Keys.LControlKey.ToString(),
-                Keys.RControlKey.ToString(),
-                Keys.LWin.ToString(),
-                Keys.RWin.ToString(),
-                Keys.Alt.ToString(),
-                Keys.LMenu.ToString(),
-                Keys.RMenu.ToString(),
-                Keys.RShiftKey.ToString(),
-                Keys.LShiftKey.ToString(),
-            };
-
             keyboardHook = new GlobalKeyboardHook();
 
-            hotkeyPressedStates = new Dictionary<string, bool>();
-            quickCastHotkeys = new Dictionary<string, Action>();
-            onReleaseHotkeys = new Dictionary<string, Action>();
+            hotkeyPressedStates = new Dictionary<Tuple<Keys, bool, bool, bool, bool>, bool>();
+            quickCastHotkeys = new Dictionary<Tuple<Keys, bool, bool, bool, bool>, Action>();
+            onReleaseHotkeys = new Dictionary<Tuple<Keys, bool, bool, bool, bool>, Action>();
 
             Start();
         }
@@ -266,24 +256,29 @@ namespace PressingIssue.Services.Win32
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 #endif
-            bool isWinPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LWIN) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RWIN) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LWin.ToString() || e.KeyName == Keys.RWin.ToString()));
-            bool isAltPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LMENU) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RMENU) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LMenu.ToString() || e.KeyName == Keys.RMenu.ToString()));
-            bool isCtrlPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LCONTROL) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RCONTROL) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LControlKey.ToString() || e.KeyName == Keys.RControlKey.ToString()));
-            bool isShiftPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LSHIFT) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RSHIFT) & KEY_PRESSED) || (e.KeyDown && (e.KeyName == Keys.LShiftKey.ToString() || e.KeyName == Keys.RShiftKey.ToString()));
-            bool keyIsModifier = modifierKeys.Contains(e.KeyName);
-            var pressedKeysAsConfig = GetPressedKeysAsSetting(e, keyIsModifier, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+            bool isWinPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LWIN) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RWIN) & KEY_PRESSED) || (e.KeyDown && (e.Key == Keys.LWin || e.Key == Keys.RWin));
+            bool isAltPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LMENU) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RMENU) & KEY_PRESSED) || (e.KeyDown && (e.Key == Keys.LMenu || e.Key == Keys.RMenu));
+            bool isCtrlPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LCONTROL) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RCONTROL) & KEY_PRESSED) || (e.KeyDown && (e.Key == Keys.LControlKey || e.Key == Keys.RControlKey));
+            bool isShiftPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LSHIFT) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RSHIFT) & KEY_PRESSED) || (e.KeyDown && (e.Key == Keys.LShiftKey || e.Key == Keys.RShiftKey));
+
+#if DEBUG
+            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processed pressed Keys and modifiers and took: {stopwatch.ElapsedTicks} ticks");
+            stopwatch.Restart();
+#endif
 
             if (e.KeyDown)
             {
                 if (ProcessingHotkeys)
                 {
-                    ProcessHotkeysDown(pressedKeysAsConfig);
+                    ProcessHotkeysDown(e.Key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
                 }
 
-                KeyChangedEvent(e, keyIsModifier, pressedKeysAsConfig, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+                KeyChangedEvent(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
 
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyDown event with setting string ({pressedKeysAsConfig}) and took: {stopwatch.ElapsedMilliseconds} ms");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processed KeyDown event and took: {stopwatch.ElapsedTicks} ticks");
+                stopwatch.Restart();
+                //logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyDown event with ({e.Key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks");
 #endif
             }
             else if (e.KeyUp)
@@ -296,15 +291,17 @@ namespace PressingIssue.Services.Win32
                 // ensure hotkeys are not pressed even if not in ProcessingHotkeys mode
                 ResetHotkeyPressedStates();
 
-                KeyChangedEvent(e, keyIsModifier, pressedKeysAsConfig, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+                KeyChangedEvent(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
 
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyUp event with setting string ({pressedKeysAsConfig}) and took: {stopwatch.ElapsedMilliseconds} ms");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processed KeyUp and took: {stopwatch.ElapsedTicks} ticks");
+                stopwatch.Restart();
+                //logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyUp event with ({e.Key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks");
 #endif
             }
         }
 
-        private void KeyChangedEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool keyIsModifier, string pressedKeysAsConfig, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
+        private void KeyChangedEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
         {
 #if DEBUG
             var stopwatch = new Stopwatch();
@@ -312,41 +309,27 @@ namespace PressingIssue.Services.Win32
 #endif
             try
             {
-                KeyEvent?.Invoke(this, new SimpleGlobalHotkeyServiceEventArgs(e.KeyDown, e.KeyName, keyIsModifier, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed, pressedKeysAsConfig));
+                KeyEvent?.Invoke(this, new SimpleGlobalHotkeyServiceEventArgs(e.KeyDown, e.Key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed));
             }
             catch (Exception ex)
             {
                 // "silently" ignore any errors when triggering events
-                logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} An error occurred trying to trigger the custom hotkeyservice event.");
+                logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyChangedEvent)} An error occurred trying to trigger the custom hotkeyservice event.");
             }
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} invoked KeyEvent  and took: {stopwatch.ElapsedMilliseconds} ms");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyChangedEvent)} invoked {nameof(KeyChangedEvent)} and took: {stopwatch.ElapsedTicks} ticks");
 #endif
         }
 
-        private string GetPressedKeysAsSetting(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool keyIsModifier, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
+        private void AddOrUpdateHotkeyState(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
         {
-            if (e.KeyUp)
+            if (this.hotkeyPressedStates.ContainsKey(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)))
             {
-                // cannot really determine here which keys were lifted (but we should know which modifier is being pressed
-                return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { "None", isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed });
-            }
-
-            string pressedKey = keyIsModifier ? "None" : e.KeyName;
-
-            // this settings format is to be compatible with previously used fmutils keyboard hook
-            return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { pressedKey, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed });
-        }
-
-        private void AddOrUpdateHotkeyState(string settingString)
-        {
-            if (this.hotkeyPressedStates.ContainsKey(settingString))
-            {
-                this.hotkeyPressedStates[settingString] = false;
+                this.hotkeyPressedStates[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)] = false;
             }
             else
             {
-                this.hotkeyPressedStates.Add(settingString, false);
+                this.hotkeyPressedStates.Add(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed), false);
             }
         }
 
@@ -358,28 +341,34 @@ namespace PressingIssue.Services.Win32
             }
         }
 
-        private void ProcessHotkeysDown(string pressedKeysAsConfig)
+        private void ProcessHotkeysDown(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
         {
 #if DEBUG
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 #endif
-            if (hotkeyPressedStates.ContainsKey(pressedKeysAsConfig))
+            if (hotkeyPressedStates.ContainsKey(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)))
             {
-                var couldTriggerQuickCast = !hotkeyPressedStates[pressedKeysAsConfig];
-                hotkeyPressedStates[pressedKeysAsConfig] = true;
+                var couldTriggerQuickCast = !hotkeyPressedStates[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)];
+                hotkeyPressedStates[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)] = true;
 
-                if (couldTriggerQuickCast && quickCastHotkeys.Any() && quickCastHotkeys.ContainsKey(pressedKeysAsConfig))
+#if DEBUG
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysDown)} querying possible quickcasts took: {stopwatch.ElapsedTicks} ticks");
+                stopwatch.Restart();
+                //logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyDown event with ({e.Key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks");
+#endif
+
+                if (couldTriggerQuickCast && quickCastHotkeys.Any() && quickCastHotkeys.ContainsKey(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)))
                 {
                     try
                     {
                         // only one action per hotkey allowed atm (dictionary), but that may change
-                        logger.Info($"{nameof(SimpleGlobalHotkeyService)} invoking Quickcast hotkey with setting string ({pressedKeysAsConfig})");
-                        quickCastHotkeys[pressedKeysAsConfig].Invoke();
+                        logger.Info($"{nameof(SimpleGlobalHotkeyService)} invoking Quickcast hotkey with ({key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed})");
+                        quickCastHotkeys[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)].Invoke();
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} An error occurred trying to trigger action for quick cast hotkey '{pressedKeysAsConfig}'");
+                        logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysDown)} An error occurred trying to trigger action for quick cast hotkey ({key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed})");
                     }
                 }
             }
@@ -388,7 +377,7 @@ namespace PressingIssue.Services.Win32
                 ResetHotkeyPressedStates();
             }
 #if DEBUG
-            logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed hotkey down event with setting string ({pressedKeysAsConfig}) and took: {stopwatch.ElapsedMilliseconds} ms");
+            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysDown)} processed hotkey down event with ({key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks");
 #endif
         }
 
@@ -401,26 +390,38 @@ namespace PressingIssue.Services.Win32
             if (onReleaseHotkeys.Any())
             {
                 var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
+#if DEBUG
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} querying possible on release keys took: {stopwatch.ElapsedTicks} ticks");
+                stopwatch.Restart();
+#endif
 
                 if (hotkeysWaitingForRelease.Any())
                 {
+#if DEBUG
+                    logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} finding out if there are any on release keys took: {stopwatch.ElapsedTicks} ticks");
+                    stopwatch.Restart();
+#endif
                     // only one action per hotkey allowed atm (dictionary), but that may change
                     foreach (var hotkeyAction in hotkeysWaitingForRelease)
                     {
                         try
                         {
-                            logger.Info($"{nameof(SimpleGlobalHotkeyService)} invoking OnRelease hotkey with setting string ({hotkeyAction.Key})");
+                            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} invoking OnRelease hotkey with ({hotkeyAction.Key.Item1} isWinPressed:{hotkeyAction.Key.Item2} isAltPressed:{hotkeyAction.Key.Item3} isCtrlPressed:{hotkeyAction.Key.Item4} isShiftPressed:{hotkeyAction.Key.Item5})");
                             hotkeyAction.Value.Invoke();
                         }
                         catch (Exception ex)
                         {
-                            logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} An error occurred trying to trigger action for on-release hotkey '{hotkeyAction.Key}'");
+                            logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} An error occurred trying to trigger action for on-release hotkey '({hotkeyAction.Key.Item1} isWinPressed:{hotkeyAction.Key.Item2} isAltPressed:{hotkeyAction.Key.Item3} isCtrlPressed:{hotkeyAction.Key.Item4} isShiftPressed:{hotkeyAction.Key.Item5})'");
                         }
                     }
                 }
+#if DEBUG
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} rest processing to the end took: {stopwatch.ElapsedTicks} ticks");
+                stopwatch.Restart();
+#endif
             }
 #if DEBUG
-            logger.Info($"{nameof(SimpleGlobalHotkeyService)} processing hotkey up event took: {stopwatch.ElapsedMilliseconds} ms");
+            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} processing hotkey up event took: {stopwatch.ElapsedTicks} ticks");
 #endif
         }
 
@@ -439,31 +440,44 @@ namespace PressingIssue.Services.Win32
             Running = false;
         }
 
-        public void AddOrUpdateQuickCastHotkey(string settingString, Action hotkeyAction)
+        public string GetPressedKeysAsSetting(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
         {
-            AddOrUpdateHotkeyState(settingString);
+            //if (e.KeyUp)
+            //{
+            //    // cannot really determine here which keys were lifted (but we should know which modifier is being pressed
+            //    return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { "None", isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed });
+            //}
+            string pressedKey = Enum.IsDefined(typeof(ModifierKeys), (int)key) ? "None" : key.ToString();
 
-            if (this.quickCastHotkeys.ContainsKey(settingString))
+            // this settings format is to be compatible with previously used fmutils keyboard hook
+            return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { pressedKey, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed });
+        }
+
+        public void AddOrUpdateQuickCastHotkey(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed, Action hotkeyAction)
+        {
+            AddOrUpdateHotkeyState(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+
+            if (this.quickCastHotkeys.ContainsKey(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)))
             {
-                this.quickCastHotkeys[settingString] = hotkeyAction;
+                this.quickCastHotkeys[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)] = hotkeyAction;
             }
             else
             {
-                this.quickCastHotkeys.Add(settingString, hotkeyAction);
+                this.quickCastHotkeys.Add(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed), hotkeyAction);
             }
         }
 
-        public void AddOrUpdateOnReleaseHotkey(string settingString, Action hotkeyAction)
+        public void AddOrUpdateOnReleaseHotkey(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed, Action hotkeyAction)
         {
-            AddOrUpdateHotkeyState(settingString);
+            AddOrUpdateHotkeyState(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
 
-            if (this.onReleaseHotkeys.ContainsKey(settingString))
+            if (this.onReleaseHotkeys.ContainsKey(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)))
             {
-                this.onReleaseHotkeys[settingString] = hotkeyAction;
+                this.onReleaseHotkeys[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)] = hotkeyAction;
             }
             else
             {
-                this.onReleaseHotkeys.Add(settingString, hotkeyAction);
+                this.onReleaseHotkeys.Add(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed), hotkeyAction);
             }
         }
 
