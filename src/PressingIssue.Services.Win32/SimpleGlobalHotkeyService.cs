@@ -273,12 +273,14 @@ namespace PressingIssue.Services.Win32
                     ProcessHotkeysDown(e.Key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
                 }
 
-                KeyChangedEvent(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
-
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processed KeyDown event and took: {stopwatch.ElapsedTicks} ticks");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(ProcessHotkeysDown)} took: {stopwatch.ElapsedTicks} ticks");
                 stopwatch.Restart();
-                //logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyDown event with ({e.Key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks");
+#endif
+                KeyChangedEvent(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+#if DEBUG
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(KeyChangedEvent)} took: {stopwatch.ElapsedTicks} ticks");
+                stopwatch.Restart();
 #endif
             }
             else if (e.KeyUp)
@@ -288,15 +290,24 @@ namespace PressingIssue.Services.Win32
                     ProcessHotkeysUp();
                 }
 
+#if DEBUG
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(ProcessHotkeysUp)} took: {stopwatch.ElapsedTicks} ticks");
+                stopwatch.Restart();
+#endif
+
                 // ensure hotkeys are not pressed even if not in ProcessingHotkeys mode
                 ResetHotkeyPressedStates();
+
+#if DEBUG
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(ResetHotkeyPressedStates)} took: {stopwatch.ElapsedTicks} ticks");
+                stopwatch.Restart();
+#endif
 
                 KeyChangedEvent(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
 
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processed KeyUp and took: {stopwatch.ElapsedTicks} ticks");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(KeyChangedEvent)} took: {stopwatch.ElapsedTicks} ticks");
                 stopwatch.Restart();
-                //logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyUp event with ({e.Key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks");
 #endif
             }
         }
@@ -351,11 +362,9 @@ namespace PressingIssue.Services.Win32
             {
                 var couldTriggerQuickCast = !hotkeyPressedStates[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)];
                 hotkeyPressedStates[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)] = true;
-
 #if DEBUG
                 logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysDown)} querying possible quickcasts took: {stopwatch.ElapsedTicks} ticks");
                 stopwatch.Restart();
-                //logger.Info($"{nameof(SimpleGlobalHotkeyService)} processed KeyDown event with ({e.Key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks");
 #endif
 
                 if (couldTriggerQuickCast && quickCastHotkeys.Any() && quickCastHotkeys.ContainsKey(new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)))
@@ -415,13 +424,10 @@ namespace PressingIssue.Services.Win32
                         }
                     }
                 }
-#if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} rest processing to the end took: {stopwatch.ElapsedTicks} ticks");
-                stopwatch.Restart();
-#endif
             }
 #if DEBUG
-            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} processing hotkey up event took: {stopwatch.ElapsedTicks} ticks");
+            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} rest processing to the end took: {stopwatch.ElapsedTicks} ticks");
+            stopwatch.Restart();
 #endif
         }
 
