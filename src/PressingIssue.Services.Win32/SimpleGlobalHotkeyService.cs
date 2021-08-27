@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using PressingIssue.Services.Contracts;
 using PressingIssue.Services.Contracts.Events;
 
@@ -232,7 +233,10 @@ namespace PressingIssue.Services.Win32
         private readonly Dictionary<Tuple<Keys, bool, bool, bool, bool>, Action> quickCastHotkeys = null;
         private readonly Dictionary<Tuple<Keys, bool, bool, bool, bool>, Action> onReleaseHotkeys = null;
 
+        private Task keyHookProcessing = null;
 
+        private bool processingKeyHook = false;
+        private bool invokingKeyChangedAction = false;
         public event EventHandler<SimpleGlobalHotkeyServiceEventArgs> KeyEvent;
         public bool Running { get; private set; } = false;
         public bool ProcessingHotkeys { get; set; } = true;
@@ -253,6 +257,8 @@ namespace PressingIssue.Services.Win32
         private void KeyboardHookEvent(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
 #if DEBUG
+            var Outerstopwatch = new Stopwatch();
+            Outerstopwatch.Start();
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 #endif
@@ -262,8 +268,29 @@ namespace PressingIssue.Services.Win32
             bool isShiftPressed = Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_LSHIFT) & KEY_PRESSED) || Convert.ToBoolean(GetAsyncKeyState((int)VirtualKeyStates.VK_RSHIFT) & KEY_PRESSED) || (e.KeyDown && (e.Key == Keys.LShiftKey || e.Key == Keys.RShiftKey));
 
 #if DEBUG
-            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processed pressed Keys and modifiers and took: {stopwatch.ElapsedTicks} ticks");
+            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processed pressed Keys and modifiers and took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
             stopwatch.Restart();
+#endif
+
+            KeyChangedAction(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+#if DEBUG
+            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(KeyChangedAction)} took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
+            stopwatch.Restart();
+#endif
+            if (keyHookProcessing == null || keyHookProcessing.Status != TaskStatus.RanToCompletion)
+            {
+                keyHookProcessing = new Task(() => ProcessKeyHook(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed));
+                keyHookProcessing.RunSynchronously();
+            }
+        }
+
+        private void ProcessKeyHook(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
+        {
+#if DEBUG
+            var Outerstopwatch = new Stopwatch();
+            Outerstopwatch.Start();
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
 #endif
 
             if (e.KeyDown)
@@ -271,65 +298,62 @@ namespace PressingIssue.Services.Win32
                 if (ProcessingHotkeys)
                 {
                     ProcessHotkeysDown(e.Key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+#if DEBUG
+                    logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(e.KeyDown)}");
+#endif
                 }
-
-#if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(ProcessHotkeysDown)} took: {stopwatch.ElapsedTicks} ticks");
-                stopwatch.Restart();
-#endif
-                KeyChangedEvent(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
-#if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(KeyChangedEvent)} took: {stopwatch.ElapsedTicks} ticks");
-                stopwatch.Restart();
-#endif
             }
             else if (e.KeyUp)
             {
                 if (ProcessingHotkeys)
                 {
                     ProcessHotkeysUp();
-                }
-
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(ProcessHotkeysUp)} took: {stopwatch.ElapsedTicks} ticks");
+                    logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(e.KeyUp)}");
+#endif
+                }
+#if DEBUG
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(ProcessHotkeysUp)} took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
                 stopwatch.Restart();
 #endif
-
                 // ensure hotkeys are not pressed even if not in ProcessingHotkeys mode
                 ResetHotkeyPressedStates();
-
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(ResetHotkeyPressedStates)} took: {stopwatch.ElapsedTicks} ticks");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(ResetHotkeyPressedStates)} took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
                 stopwatch.Restart();
 #endif
 
-                KeyChangedEvent(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
-
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(KeyChangedEvent)} took: {stopwatch.ElapsedTicks} ticks");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(KeyChangedAction)} took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} took: {Outerstopwatch.ElapsedTicks} ticks ({Outerstopwatch.ElapsedMilliseconds} ms)");
                 stopwatch.Restart();
 #endif
             }
         }
 
-        private void KeyChangedEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
+        private void KeyChangedAction(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
         {
-#if DEBUG
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-#endif
-            try
+            if (!invokingKeyChangedAction)
             {
-                KeyEvent?.Invoke(this, new SimpleGlobalHotkeyServiceEventArgs(e.KeyDown, e.Key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed));
-            }
-            catch (Exception ex)
-            {
-                // "silently" ignore any errors when triggering events
-                logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyChangedEvent)} An error occurred trying to trigger the custom hotkeyservice event.");
-            }
+                invokingKeyChangedAction = true;
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyChangedEvent)} invoked {nameof(KeyChangedEvent)} and took: {stopwatch.ElapsedTicks} ticks");
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
 #endif
+                try
+                {
+                    KeyEvent?.Invoke(this, new SimpleGlobalHotkeyServiceEventArgs(e.KeyDown, e.Key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed));
+                }
+                catch (Exception ex)
+                {
+                    // "silently" ignore any errors when triggering events
+                    logger.Error(ex, $"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyChangedAction)} An error occurred trying to trigger the custom hotkeyservice event.");
+                }
+#if DEBUG
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyChangedAction)} invoked {nameof(KeyChangedAction)} and took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
+#endif
+                invokingKeyChangedAction = false;
+            }
         }
 
         private void AddOrUpdateHotkeyState(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
@@ -363,7 +387,7 @@ namespace PressingIssue.Services.Win32
                 var couldTriggerQuickCast = !hotkeyPressedStates[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)];
                 hotkeyPressedStates[new Tuple<Keys, bool, bool, bool, bool>(key, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed)] = true;
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysDown)} querying possible quickcasts took: {stopwatch.ElapsedTicks} ticks");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysDown)} querying possible quickcasts took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
                 stopwatch.Restart();
 #endif
 
@@ -386,13 +410,16 @@ namespace PressingIssue.Services.Win32
                 ResetHotkeyPressedStates();
             }
 #if DEBUG
-            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysDown)} processed hotkey down event with ({key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks");
+            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysDown)} processed hotkey down event with ({key} isWinPressed:{isWinPressed} isAltPressed:{isAltPressed} isCtrlPressed:{isCtrlPressed} isShiftPressed:{isShiftPressed}) and took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
 #endif
         }
 
         private void ProcessHotkeysUp()
         {
 #if DEBUG
+            var Outerstopwatch = new Stopwatch();
+            Outerstopwatch.Start();
+
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 #endif
@@ -400,14 +427,14 @@ namespace PressingIssue.Services.Win32
             {
                 var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
 #if DEBUG
-                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} querying possible on release keys took: {stopwatch.ElapsedTicks} ticks");
+                logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} querying possible on release keys took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
                 stopwatch.Restart();
 #endif
 
                 if (hotkeysWaitingForRelease.Any())
                 {
 #if DEBUG
-                    logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} finding out if there are any on release keys took: {stopwatch.ElapsedTicks} ticks");
+                    logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} finding out if there are any on release keys took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
                     stopwatch.Restart();
 #endif
                     // only one action per hotkey allowed atm (dictionary), but that may change
@@ -426,7 +453,7 @@ namespace PressingIssue.Services.Win32
                 }
             }
 #if DEBUG
-            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} rest processing to the end took: {stopwatch.ElapsedTicks} ticks");
+            logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(ProcessHotkeysUp)} rest processing to the end took {Outerstopwatch.ElapsedTicks} ticks ({Outerstopwatch.ElapsedMilliseconds} ms)");
             stopwatch.Restart();
 #endif
         }

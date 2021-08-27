@@ -317,11 +317,11 @@ namespace PressingIssue.Services.Win32
                     try
                     {
 #if DEBUG
-                        logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} invoking keyevent after: {stopwatch.ElapsedTicks} ticks");
+                        logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} invoking keyevent after: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
 #endif
                         KeyEvent?.Invoke(this, new GlobalKeyboardHookEventArgs(wParam, lParam));
 #if DEBUG
-                        logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} invoking keyevent took: {stopwatch.ElapsedTicks} ticks");
+                        logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} invoking keyevent took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
 #endif
                     }
                     catch (Exception ex)
@@ -334,7 +334,7 @@ namespace PressingIssue.Services.Win32
 
 #if DEBUG
             stopwatch.Stop();
-            logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} processing HookCallbackFunction took: {stopwatch.ElapsedTicks} ticks");
+            logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} processing HookCallbackFunction took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
 #endif
 
             //you need to call CallNextHookEx without further processing
