@@ -277,11 +277,13 @@ namespace PressingIssue.Services.Win32
             logger.Info($"{nameof(SimpleGlobalHotkeyService)} @{nameof(KeyboardHookEvent)} processing {nameof(KeyChangedAction)} took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
             stopwatch.Restart();
 #endif
-            if (keyHookProcessing == null || keyHookProcessing.Status != TaskStatus.RanToCompletion)
-            {
-                keyHookProcessing = new Task(() => ProcessKeyHook(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed));
-                keyHookProcessing.RunSynchronously();
-            }
+            ProcessKeyHook(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed);
+
+            //if (keyHookProcessing == null || keyHookProcessing.Status != TaskStatus.RanToCompletion)
+            //{
+            //    //keyHookProcessing = new Task(() => ProcessKeyHook(e, isWinPressed, isAltPressed, isCtrlPressed, isShiftPressed));
+            //    //keyHookProcessing.RunSynchronously();
+            //}
         }
 
         private void ProcessKeyHook(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
