@@ -1,0 +1,5 @@
+Add AddHotkey-Method based on a new setting string format including info about
+- hotkey action
+- PressedKeysInfo
+- is quickcast or onrelease
+- (repeat interval?!?)
