@@ -1,4 +1,6 @@
-﻿namespace PressingIssue.Services.Contracts.Events
+﻿using PressingIssue.Services.Win32;
+
+namespace PressingIssue.Services.Contracts.Events
 {
     public class SimpleGlobalHotkeyServiceEventArgs
     {
@@ -11,17 +13,17 @@
         public bool IsCtrlPressed { get; private set; }
         public bool IsShiftPressed { get; private set; }
 
-        public SimpleGlobalHotkeyServiceEventArgs(bool keyDown, Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed)
+        public SimpleGlobalHotkeyServiceEventArgs(bool keyDown, PressedKeysInfo pressedKeysInfo)
         {
-            this.Key = key;
+            this.Key = pressedKeysInfo.Keys;
 
             this.KeyDown = keyDown;
             this.KeyUp = !keyDown;
 
-            this.IsWinPressed = isWinPressed;
-            this.IsAltPressed = isAltPressed;
-            this.IsCtrlPressed = isCtrlPressed;
-            this.IsShiftPressed = isShiftPressed;
+            this.IsWinPressed = pressedKeysInfo.IsWinPressed;
+            this.IsAltPressed = pressedKeysInfo.IsAltPressed;
+            this.IsCtrlPressed = pressedKeysInfo.IsCtrlPressed;
+            this.IsShiftPressed = pressedKeysInfo.IsShiftPressed;
         }
     }
 }

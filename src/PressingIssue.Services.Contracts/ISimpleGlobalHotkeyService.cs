@@ -1,5 +1,6 @@
 ﻿using System;
 using PressingIssue.Services.Contracts.Events;
+using PressingIssue.Services.Win32;
 
 namespace PressingIssue.Services.Contracts
 {
@@ -9,10 +10,10 @@ namespace PressingIssue.Services.Contracts
         // but it is not needed for processing hotkeys
         event EventHandler<SimpleGlobalHotkeyServiceEventArgs> KeyEvent;
 
-        void AddOrUpdateQuickCastHotkey(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed, Action hotkeyAction);
+        void AddOrUpdateQuickCastHotkey(PressedKeysInfo pressedKeysInfo, Action hotkeyAction);
 
-        void AddOrUpdateOnReleaseHotkey(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed, Action hotkeyAction);
+        void AddOrUpdateOnReleaseHotkey(PressedKeysInfo pressedKeysInfo, Action hotkeyAction);
 
-        string GetPressedKeysAsSetting(Keys key, bool isWinPressed, bool isAltPressed, bool isCtrlPressed, bool isShiftPressed);
+        string GetPressedKeysAsSetting(PressedKeysInfo pressedKeysInfo);
     }
 }

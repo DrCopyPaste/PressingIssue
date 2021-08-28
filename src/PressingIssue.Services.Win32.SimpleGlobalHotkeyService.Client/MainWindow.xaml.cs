@@ -13,7 +13,6 @@ namespace TestClient_SimpleGlobalHotkeyService
     public partial class MainWindow : Window
     {
         private readonly SimpleGlobalHotkeyService hotkeyService;
-        //private GlobalHotkeyService hotkeyService2;
 
         public MainWindow()
         {
@@ -23,24 +22,15 @@ namespace TestClient_SimpleGlobalHotkeyService
 
             SetModeText();
 
-            //hotkeyService2 = new HotkeyService();
-
-            //hotkeyService.AddOrUpdateOnReleaseHotkey(
-            //    "Key=Pause; Win=False; Alt=False; Ctrl=False; Shift=False",
-            //    () =>
-            //    {
-            //        var stringBuilder = new StringBuilder(Eventlines.Text);
-            //        stringBuilder.Insert(0, $"{DateTime.Now:yyyy-MM-dd hh:mm:ss.fff} [Pause] hotkey triggered on release\n");
-
-            //        Eventlines.Text = stringBuilder.ToString();
-            //    });
-
             hotkeyService.AddOrUpdateOnReleaseHotkey(
-                key:PressingIssue.Services.Contracts.Keys.Pause,
-                isWinPressed: false,
-                isAltPressed: false,
-                isCtrlPressed: false,
-                isShiftPressed: false,
+                new PressedKeysInfo()
+                {
+                    Keys = PressingIssue.Services.Contracts.Keys.Pause,
+                    IsWinPressed = false,
+                    IsAltPressed = false,
+                    IsShiftPressed = true
+                }
+                ,
                 () =>
                 {
                     var stringBuilder = new StringBuilder(Eventlines.Text);
@@ -50,11 +40,13 @@ namespace TestClient_SimpleGlobalHotkeyService
                 });
 
             hotkeyService.AddOrUpdateQuickCastHotkey(
-                key: PressingIssue.Services.Contracts.Keys.F12,
-                isWinPressed: false,
-                isAltPressed: false,
-                isCtrlPressed: false,
-                isShiftPressed: false,
+                new PressedKeysInfo()
+                {
+                    Keys = PressingIssue.Services.Contracts.Keys.F12,
+                    IsWinPressed = false,
+                    IsAltPressed = false,
+                    IsShiftPressed = true
+                },
                 () =>
                 {
                     var stringBuilder = new StringBuilder(Eventlines.Text);
@@ -69,14 +61,12 @@ namespace TestClient_SimpleGlobalHotkeyService
         private void HotkeyServiceKeyEvent(object sender, SimpleGlobalHotkeyServiceEventArgs e)
         {
             string result = $" {(e.KeyDown ? "Down" : "Up")} Alt:{e.IsAltPressed} - Ctrl:{e.IsCtrlPressed} - Shift:{e.IsShiftPressed} - Win:{e.IsWinPressed} - Key:{e.Key}";
-
-            this.ShownKeys.Content = result;// e.AsSettingString;
+            this.ShownKeys.Content = result;
         }
 
         void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             hotkeyService.Dispose();
-            //hotkeyService2.Dispose();
         }
 
         private void SetModeText()

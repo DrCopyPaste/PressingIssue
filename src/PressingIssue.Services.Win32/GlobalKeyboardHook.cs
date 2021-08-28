@@ -302,11 +302,6 @@ namespace PressingIssue.Services.Win32
 
         private IntPtr HookCallbackFunction(int code, IntPtr wParam, IntPtr lParam)
         {
-#if DEBUG
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-#endif
-
             if (code >= 0)
             {
                 // WM_KEYDOWN / WM_KEYUP capture most key events
@@ -316,13 +311,8 @@ namespace PressingIssue.Services.Win32
                 {
                     try
                     {
-#if DEBUG
-                        logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} invoking keyevent after: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
-#endif
                         KeyEvent?.Invoke(this, new GlobalKeyboardHookEventArgs(wParam, lParam));
-#if DEBUG
-                        logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} invoking keyevent took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
-#endif
+
                     }
                     catch (Exception ex)
                     {
@@ -331,11 +321,6 @@ namespace PressingIssue.Services.Win32
                     }
                 }
             }
-
-#if DEBUG
-            stopwatch.Stop();
-            logger.Info($"{nameof(GlobalKeyboardHook)} [{Guid}] @{nameof(HookCallbackFunction)} processing HookCallbackFunction took: {stopwatch.ElapsedTicks} ticks ({stopwatch.ElapsedMilliseconds} ms)");
-#endif
 
             //you need to call CallNextHookEx without further processing
             //and return the value returned by CallNextHookEx
