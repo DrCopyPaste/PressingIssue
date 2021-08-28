@@ -213,28 +213,28 @@ namespace PressingIssue.Services.Win32
 
         private void UpdateNewlyPressedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            //if (!pressedKeys.Contains(e.KeyName))
-            //{
-            //    pressedKeys.Add(e.KeyName);
-            //}
+            if (!pressedKeys.Contains(e.Key.ToString()))
+            {
+                pressedKeys.Add(e.Key.ToString());
+            }
 
-            //if (!pressedNonModifierKeys.Contains(e.KeyName) && !modifierKeys.Contains(e.KeyName))
-            //{
-            //    pressedNonModifierKeys.Add(e.KeyName);
-            //}
+            if (!pressedNonModifierKeys.Contains(e.Key.ToString()) && !modifierKeys.Contains(e.Key.ToString()))
+            {
+                pressedNonModifierKeys.Add(e.Key.ToString());
+            }
         }
 
         private void UpdateLiftedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            //if (pressedKeys.Contains(e.KeyName))
-            //{
-            //    pressedKeys.Remove(e.KeyName);
-            //}
+            if (pressedKeys.Contains(e.Key.ToString()))
+            {
+                pressedKeys.Remove(e.Key.ToString());
+            }
 
-            //if (pressedNonModifierKeys.Contains(e.KeyName))
-            //{
-            //    pressedNonModifierKeys.Remove(e.KeyName);
-            //}
+            if (pressedNonModifierKeys.Contains(e.Key.ToString()))
+            {
+                pressedNonModifierKeys.Remove(e.Key.ToString());
+            }
         }
 
         public void Start(bool processHotkeys = true)
