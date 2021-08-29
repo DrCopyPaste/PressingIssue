@@ -12,7 +12,5 @@ namespace PressingIssue.Services.Contracts
         void AddOrUpdateQuickCastHotkey(PressedKeysInfo pressedKeysInfo, Action hotkeyAction);
 
         void AddOrUpdateOnReleaseHotkey(PressedKeysInfo pressedKeysInfo, Action hotkeyAction);
-
-        string GetPressedKeysAsSetting(PressedKeysInfo pressedKeysInfo);
     }
 }

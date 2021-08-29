@@ -459,20 +459,6 @@ namespace PressingIssue.Services.Win32
         }
 
         /// <summary>
-        /// Generates a string matching a given PressedKeysInfo
-        /// </summary>
-        /// <param name="pressedKeysInfo"></param>
-        /// <returns></returns>
-        public string GetPressedKeysAsSetting(PressedKeysInfo pressedKeysInfo)
-        {
-            // cannot really determine here which keys were lifted (user might lift multiple keys at once, but we might not catch every one of them, but we should know which modifier is being pressed)
-            string pressedKey = Enum.IsDefined(typeof(ModifierKeys), (int)pressedKeysInfo.Keys) ? "None" : pressedKeysInfo.Keys.ToString();
-
-            // this settings format is to be compatible with previously used fmutils keyboard hook
-            return string.Format("Key={0}; Win={1}; Alt={2}; Ctrl={3}; Shift={4}", new object[] { pressedKey, pressedKeysInfo.IsWinPressed, pressedKeysInfo.IsAltPressed, pressedKeysInfo.IsCtrlPressed, pressedKeysInfo.IsShiftPressed });
-        }
-
-        /// <summary>
         /// assignes the pressedKeysInfo to hotkeyPressedStates
         /// </summary>
         /// <param name="pressedKeysInfo"></param>
