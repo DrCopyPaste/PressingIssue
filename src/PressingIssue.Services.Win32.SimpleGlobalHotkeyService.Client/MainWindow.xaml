@@ -11,7 +11,7 @@
         <Label Name="ShownKeys"  Content="CurrentPressedKeys" HorizontalAlignment="Left" Margin="158,143,0,0" VerticalAlignment="Top"/>
         <Label Name="CurrentMode"  Content="CurrentMode" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" RenderTransformOrigin="2.658,2.38"/>
         <ScrollViewer Margin="0,273,0,0" VerticalAlignment="Top" Width="780" Height="141">
-            <TextBlock x:Name="Eventlines" Text=""  HorizontalAlignment="Left"/>
+            <TextBlock x:Name="Eventlines" Text="{Binding TextContents}"  HorizontalAlignment="Left"/>
         </ScrollViewer>
 
     </Grid>
