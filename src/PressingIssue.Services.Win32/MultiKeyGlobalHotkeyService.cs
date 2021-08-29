@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Windows.Forms;
 using PressingIssue.Services.Contracts;
 using PressingIssue.Services.Contracts.Events;
 
@@ -57,10 +56,10 @@ namespace PressingIssue.Services.Win32
 
         private void KeyboardHookEvent(object sender, GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-#if DEBUG
+
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-#endif
+
 
             if (e.KeyDown)
             {
@@ -74,10 +73,10 @@ namespace PressingIssue.Services.Win32
 
                 KeyChangedEvent(e, pressedKeysAsConfig);
 
-#if DEBUG
+
                 logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} monitored keys pressed: ({string.Join('-', pressedKeys)}) non modifiers: ({string.Join('-', pressedNonModifierKeys)})");
                 logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} processed KeyDown event with setting string ({pressedKeysAsConfig}) and took: {stopwatch.ElapsedMilliseconds} ms");
-#endif
+
             }
             else if (e.KeyUp)
             {
@@ -94,19 +93,19 @@ namespace PressingIssue.Services.Win32
 
                 KeyChangedEvent(e, pressedKeysAsConfig);
 
-#if DEBUG
+
                 logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} monitored keys pressed: ({string.Join('-', pressedKeys)}) non modifiers: ({string.Join('-', pressedNonModifierKeys)})");
                 logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} processed KeyUp event with setting string ({pressedKeysAsConfig}) and took: {stopwatch.ElapsedMilliseconds} ms");
-#endif
+
             }
         }
 
         private void KeyChangedEvent(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e, string pressedKeysAsConfig)
         {
-#if DEBUG
+
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-#endif
+
             try
             {
                 KeyEvent?.Invoke(this, new MultiKeyGlobalHotkeyServiceEventArgs(e.KeyDown, pressedKeys, pressedNonModifierKeys, pressedKeysAsConfig));
@@ -116,9 +115,9 @@ namespace PressingIssue.Services.Win32
                 // "silently" ignore any errors when triggering events
                 logger.Error(ex, $"{nameof(MultiKeyGlobalHotkeyService)} An error occurred trying to trigger the custom hotkeyservice event.");
             }
-#if DEBUG
+
             logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} invoked KeyEvent  and took: {stopwatch.ElapsedMilliseconds} ms");
-#endif
+
         }
 
         private void AddOrUpdateHotkeyState(string settingString)
@@ -148,10 +147,10 @@ namespace PressingIssue.Services.Win32
 
         private void ProcessHotkeysDown(string pressedKeysAsConfig)
         {
-#if DEBUG
+
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-#endif
+
             if (hotkeyPressedStates.ContainsKey(pressedKeysAsConfig))
             {
                 var couldTriggerQuickCast = !hotkeyPressedStates[pressedKeysAsConfig];
@@ -175,17 +174,17 @@ namespace PressingIssue.Services.Win32
             {
                 ResetHotkeyPressedStates();
             }
-#if DEBUG
+
             logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} processed hotkey down event with setting string ({pressedKeysAsConfig}) and took: {stopwatch.ElapsedMilliseconds} ms");
-#endif
+
         }
 
         private void ProcessHotkeysUp()
         {
-#if DEBUG
+
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-#endif
+
             if (onReleaseHotkeys.Any())
             {
                 var hotkeysWaitingForRelease = onReleaseHotkeys.Where(h => hotkeyPressedStates.ContainsKey(h.Key) && hotkeyPressedStates[h.Key]);
@@ -207,34 +206,34 @@ namespace PressingIssue.Services.Win32
                     }
                 }
             }
-#if DEBUG
+
             logger.Info($"{nameof(MultiKeyGlobalHotkeyService)} processing hotkey up event took: {stopwatch.ElapsedMilliseconds} ms");
-#endif
+
         }
 
         private void UpdateNewlyPressedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            if (!pressedKeys.Contains(e.KeyName))
+            if (!pressedKeys.Contains(e.Key.ToString()))
             {
-                pressedKeys.Add(e.KeyName);
+                pressedKeys.Add(e.Key.ToString());
             }
 
-            if (!pressedNonModifierKeys.Contains(e.KeyName) && !modifierKeys.Contains(e.KeyName))
+            if (!pressedNonModifierKeys.Contains(e.Key.ToString()) && !modifierKeys.Contains(e.Key.ToString()))
             {
-                pressedNonModifierKeys.Add(e.KeyName);
+                pressedNonModifierKeys.Add(e.Key.ToString());
             }
         }
 
         private void UpdateLiftedKeys(GlobalKeyboardHook.GlobalKeyboardHookEventArgs e)
         {
-            if (pressedKeys.Contains(e.KeyName))
+            if (pressedKeys.Contains(e.Key.ToString()))
             {
-                pressedKeys.Remove(e.KeyName);
+                pressedKeys.Remove(e.Key.ToString());
             }
 
-            if (pressedNonModifierKeys.Contains(e.KeyName))
+            if (pressedNonModifierKeys.Contains(e.Key.ToString()))
             {
-                pressedNonModifierKeys.Remove(e.KeyName);
+                pressedNonModifierKeys.Remove(e.Key.ToString());
             }
         }
 
