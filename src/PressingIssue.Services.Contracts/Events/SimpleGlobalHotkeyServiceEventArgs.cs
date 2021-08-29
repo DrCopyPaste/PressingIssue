@@ -1,6 +1,4 @@
-﻿using PressingIssue.Services.Win32;
-
-namespace PressingIssue.Services.Contracts.Events
+﻿namespace PressingIssue.Services.Contracts.Events
 {
     public class SimpleGlobalHotkeyServiceEventArgs
     {

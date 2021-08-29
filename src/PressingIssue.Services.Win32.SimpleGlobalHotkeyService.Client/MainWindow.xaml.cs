@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using PressingIssue.Services.Contracts;
 using PressingIssue.Services.Contracts.Events;
 using PressingIssue.Services.Win32;
 

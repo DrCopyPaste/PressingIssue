@@ -1,11 +1,4 @@
-﻿using PressingIssue.Services.Contracts;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace PressingIssue.Services.Win32
+﻿namespace PressingIssue.Services.Contracts
 {
     public struct PressedKeysInfo
     {

@@ -1,6 +1,5 @@
 ﻿using System;
 using PressingIssue.Services.Contracts.Events;
-using PressingIssue.Services.Win32;
 
 namespace PressingIssue.Services.Contracts
 {
